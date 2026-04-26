@@ -209,7 +209,9 @@
                   Enrol
                 </button>
                 <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                {% if session.get('role') == 'Admin' %}
                 <a href="{{ url_for('student_id_card', student_id=student.id) }}" class="btn btn-secondary btn-sm" title="Print ID Card" target="_blank">🪪 ID</a>
+                {% endif %}
                 <button class="btn btn-secondary btn-sm"
                   onclick="openPromoteModal({{ student.id }}, '{{ student.first_name }} {{ student.surname }}', '{{ student.stream or '' }}', {{ student.year_of_study or 1 }}, '{{ student.status }}')">
                   ↑ Promote

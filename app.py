@@ -1756,6 +1756,7 @@ def delete_student_portal(student_id):
 # ── ID Card ───────────────────────────────────
 @app.route("/students/<int:student_id>/id-card")
 @login_required
+@admin_required
 def student_id_card(student_id):
     student = Student.query.get_or_404(student_id)
     return render_template("student_id_card.html", student=student, year=date.today().year)
@@ -1763,6 +1764,7 @@ def student_id_card(student_id):
 
 @app.route("/students/id-cards/bulk")
 @login_required
+@admin_required
 def bulk_id_cards():
     ids = request.args.get("ids", "")
     if ids:
