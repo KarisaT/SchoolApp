@@ -310,6 +310,36 @@ class DisciplinaryRecord(db.Model):
     student = db.relationship("Student", backref=db.backref("disciplinary_records", passive_deletes=True))
 
 
+# ── Student Portal User ───────────────────────
+class StudentPortalUser(db.Model):
+    """Login credentials for the student self-service portal."""
+    __tablename__ = "student_portal_user"
+    id            = db.Column(db.Integer, primary_key=True)
+    student_id    = db.Column(db.Integer, db.ForeignKey("student.id", ondelete="CASCADE"), unique=True, nullable=False)
+    username      = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    last_login    = db.Column(db.DateTime, nullable=True)
+    student       = db.relationship("Student", backref=db.backref("portal_user", uselist=False, passive_deletes=True))
+
+    def check_password(self, pw):
+        return check_password_hash(self.password_hash, pw)
+
+    def set_password(self, pw):
+        self.password_hash = generate_password_hash(pw)
+
+
+# ── Teacher Attendance ────────────────────────
+class TeacherAttendance(db.Model):
+    __tablename__ = "teacher_attendance"
+    id         = db.Column(db.Integer, primary_key=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("teacher.id", ondelete="CASCADE"), nullable=False)
+    date       = db.Column(db.Date, default=date.today, nullable=False)
+    status     = db.Column(db.String(20), nullable=False, default="Present")  # Present | Absent | Late | On Leave
+    notes      = db.Column(db.String(200), nullable=True)
+    teacher    = db.relationship("Teacher", backref=db.backref("attendances", passive_deletes=True))
+    __table_args__ = (db.UniqueConstraint("teacher_id", "date", name="uq_teacher_date"),)
+
+
 # ── Helpers ───────────────────────────────────
 def compute_grade(marks, total):
     pct = (marks / total) * 100 if total > 0 else 0
@@ -1568,6 +1598,246 @@ def delete_disciplinary(id):
     return redirect(url_for("disciplinary_page"))
 
 
+# ── Student Portal ────────────────────────────
+@app.route("/student-portal/login", methods=["GET", "POST"])
+def student_portal_login():
+    if "student_id" in session:
+        return redirect(url_for("student_portal_home"))
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        pu = StudentPortalUser.query.filter_by(username=username).first()
+        if pu and pu.check_password(password):
+            session["student_id"]   = pu.student_id
+            session["student_user"] = pu.username
+            pu.last_login = datetime.now()
+            db.session.commit()
+            return redirect(url_for("student_portal_home"))
+        error = "Invalid username or password."
+    return render_template("student_portal_login.html", error=error)
+
+
+@app.route("/student-portal/logout")
+def student_portal_logout():
+    session.pop("student_id", None)
+    session.pop("student_user", None)
+    return redirect(url_for("student_portal_login"))
+
+
+@app.route("/student-portal")
+def student_portal_home():
+    if "student_id" not in session:
+        return redirect(url_for("student_portal_login"))
+    student = Student.query.get_or_404(session["student_id"])
+    today_str   = date.today().strftime("%A, %d %B %Y")
+    day_name    = date.today().strftime("%A")
+
+    # Attendance stats
+    all_att    = Attendance.query.filter_by(student_id=student.id).all()
+    present_count = sum(1 for a in all_att if a.status == "Present")
+    total_att  = len(all_att)
+    att_pct    = round(present_count / total_att * 100) if total_att else 0
+    att_days   = [{"date": a.date.isoformat(), "status": a.status} for a in
+                  sorted(all_att, key=lambda x: x.date)]
+
+    # Exam results
+    all_results = ExamResult.query.filter_by(student_id=student.id)\
+        .join(Exam).order_by(Exam.exam_date.desc()).all()
+    results_data = []
+    for r in all_results:
+        pct = round((r.marks / r.exam.total_marks) * 100, 1) if r.exam.total_marks else 0
+        results_data.append({
+            "exam": {"course": r.exam.course, "name": r.exam.title, "date": r.exam.exam_date},
+            "score": pct, "grade": r.grade or compute_grade(r.marks, r.exam.total_marks),
+        })
+    average_score = round(sum(x["score"] for x in results_data) / len(results_data), 1) if results_data else 0
+    recent_results = results_data[:5]
+
+    # Fees
+    fees        = FeeStructure.query.all()
+    total_fees  = sum(f.amount for f in fees)
+    payments    = Payment.query.filter_by(student_id=student.id).all()
+    total_paid  = sum(p.amount_paid for p in payments)
+    fee_balance = max(0, total_fees - total_paid)
+    fee_items   = []
+    for f in fees:
+        paid_for = sum(p.amount_paid for p in payments if p.fee_id == f.id)
+        fee_items.append({
+            "description": f.name, "date": f.term,
+            "amount": f.amount, "paid": paid_for >= f.amount,
+        })
+
+    # Today's timetable
+    today_classes = TimetableEntry.query.join(Course)\
+        .join(Enrollment, (Enrollment.course_id == Course.id) & (Enrollment.student_id == student.id))\
+        .filter(TimetableEntry.day == day_name).order_by(TimetableEntry.start_time).all()
+
+    # Library
+    borrow_records = BorrowRecord.query.filter_by(student_id=student.id)\
+        .order_by(BorrowRecord.borrow_date.desc()).all()
+
+    return render_template(
+        "student_portal.html",
+        student=student,
+        today_date=today_str,
+        enrolled_courses=len(student.courses),
+        attendance_pct=att_pct,
+        present_count=present_count,
+        absent_count=total_att - present_count,
+        attendance_days=att_days,
+        all_results=results_data,
+        recent_results=recent_results,
+        average_score=average_score,
+        fee_balance=fee_balance,
+        total_paid=total_paid,
+        payment_count=len(payments),
+        fee_items=fee_items,
+        next_due_date=None,
+        active_term=None,
+        today_classes=today_classes,
+        borrow_records=borrow_records,
+    )
+
+
+# ── Student Portal Management (Admin) ─────────
+@app.route("/students/portal-accounts")
+@login_required
+@admin_required
+def student_portal_accounts():
+    students = Student.query.filter_by(status="Active").order_by(Student.surname).all()
+    return render_template("student_portal_accounts.html", students=students)
+
+
+@app.route("/students/<int:student_id>/create-portal", methods=["POST"])
+@login_required
+@admin_required
+@csrf_protect
+def create_student_portal(student_id):
+    student = Student.query.get_or_404(student_id)
+    if student.portal_user:
+        return redirect(url_for("student_portal_accounts"))
+    username = request.form.get("username", student.id_number).strip()
+    password = request.form.get("password", "").strip()
+    if not password:
+        password = student.id_number  # default password = student ID
+    pu = StudentPortalUser(student_id=student.id, username=username)
+    pu.set_password(password)
+    db.session.add(pu)
+    db.session.commit()
+    return redirect(url_for("student_portal_accounts"))
+
+
+@app.route("/students/<int:student_id>/reset-portal-password", methods=["POST"])
+@login_required
+@admin_required
+@csrf_protect
+def reset_student_portal_password(student_id):
+    pu = StudentPortalUser.query.filter_by(student_id=student_id).first_or_404()
+    new_pw = request.form.get("password", "").strip()
+    if new_pw:
+        pu.set_password(new_pw)
+        db.session.commit()
+    return redirect(url_for("student_portal_accounts"))
+
+
+@app.route("/students/<int:student_id>/delete-portal", methods=["POST"])
+@login_required
+@admin_required
+@csrf_protect
+def delete_student_portal(student_id):
+    pu = StudentPortalUser.query.filter_by(student_id=student_id).first()
+    if pu:
+        db.session.delete(pu)
+        db.session.commit()
+    return redirect(url_for("student_portal_accounts"))
+
+
+# ── ID Card ───────────────────────────────────
+@app.route("/students/<int:student_id>/id-card")
+@login_required
+def student_id_card(student_id):
+    student = Student.query.get_or_404(student_id)
+    return render_template("student_id_card.html", student=student, year=date.today().year)
+
+
+@app.route("/students/id-cards/bulk")
+@login_required
+def bulk_id_cards():
+    ids = request.args.get("ids", "")
+    if ids:
+        id_list = [int(i) for i in ids.split(",") if i.strip().isdigit()]
+        students = Student.query.filter(Student.id.in_(id_list)).all()
+    else:
+        students = Student.query.filter_by(status="Active").order_by(Student.surname).all()
+    return render_template("student_id_card.html", students=students, year=date.today().year, bulk=True)
+
+
+# ── Teacher Attendance ────────────────────────
+@app.route("/teacher-attendance")
+@login_required
+def teacher_attendance_page():
+    date_str  = request.args.get("date", date.today().isoformat())
+    try:
+        sel_date = date.fromisoformat(date_str)
+    except ValueError:
+        sel_date = date.today()
+
+    teachers = Teacher.query.filter_by(status="Active").order_by(Teacher.name).all()
+    records  = {r.teacher_id: r for r in TeacherAttendance.query.filter_by(date=sel_date).all()}
+
+    # Summary stats for the month
+    month_start = sel_date.replace(day=1)
+    monthly = TeacherAttendance.query.filter(
+        TeacherAttendance.date >= month_start,
+        TeacherAttendance.date <= sel_date,
+    ).all()
+
+    teacher_stats = {}
+    for t in teachers:
+        t_recs = [r for r in monthly if r.teacher_id == t.id]
+        present = sum(1 for r in t_recs if r.status == "Present")
+        teacher_stats[t.id] = {
+            "present": present, "total": len(t_recs),
+            "rate": round(present / len(t_recs) * 100) if t_recs else None,
+        }
+
+    return render_template(
+        "teacher_attendance.html",
+        teachers=teachers, records=records,
+        sel_date=sel_date, today=date.today(),
+        teacher_stats=teacher_stats,
+    )
+
+
+@app.route("/teacher-attendance/mark", methods=["POST"])
+@login_required
+@roles_required("Admin", "Teacher")
+@csrf_protect
+def mark_teacher_attendance():
+    date_str = request.form.get("date", date.today().isoformat())
+    try:
+        att_date = date.fromisoformat(date_str)
+    except ValueError:
+        att_date = date.today()
+
+    teacher_ids = request.form.getlist("teacher_ids")
+    for tid in teacher_ids:
+        status = request.form.get(f"status_{tid}", "Absent")
+        notes  = request.form.get(f"notes_{tid}", "")
+        rec = TeacherAttendance.query.filter_by(teacher_id=int(tid), date=att_date).first()
+        if rec:
+            rec.status = status
+            rec.notes  = notes or None
+        else:
+            db.session.add(TeacherAttendance(
+                teacher_id=int(tid), date=att_date, status=status,
+                notes=notes or None,
+            ))
+    db.session.commit()
+    return redirect(url_for("teacher_attendance_page", date=att_date.isoformat()))
+
+
 # ── Chatbot ───────────────────────────────────
 @app.route("/chatbot", methods=["POST"])
 @login_required
@@ -1668,6 +1938,11 @@ def init_db():
                 conn.commit()
         except Exception as e:
             print(f"Migration notice: {e}")
+        # SQLite-safe table creation for new models
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"Table creation notice: {e}")
 
 
 init_db()

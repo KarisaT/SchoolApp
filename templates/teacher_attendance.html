@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Teacher Attendance – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .page-title { font-family:'Fraunces',serif; font-size:1.6rem; font-weight:600; }
+  .page-sub { font-size:0.82rem; color:var(--muted); margin-top:2px; }
+  .filter-bar { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .filter-bar label { font-size:0.82rem; font-weight:600; margin-right:8px; }
+  input[type="date"] { padding:8px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:0.875rem; color:var(--text); background:var(--surface); outline:none; }
+  input[type="date"]:focus { border-color:var(--coral); }
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--radius-sm); font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; border:1.5px solid transparent; transition:all .12s; text-decoration:none; }
+  .btn-primary { background:var(--coral,#e05c3a); color:#fff; border-color:var(--coral,#e05c3a); }
+  .btn-primary:hover { opacity:.9; }
+  .btn-ghost { background:none; border-color:var(--border); color:var(--muted); }
+  .btn-ghost:hover { border-color:var(--coral); color:var(--coral); }
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
+  .stat-val { font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; line-height:1; margin-bottom:4px; }
+  .stat-lbl { font-size:0.72rem; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:600; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .card-head { padding:16px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .card-head h3 { font-family:'Fraunces',serif; font-size:1rem; font-weight:600; margin:0; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:0.875rem; }
+  th { text-align:left; padding:10px 20px; font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--border); background:var(--bg); }
+  td { padding:12px 20px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--bg); }
+  .toggle-group { display:inline-flex; background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .toggle-group input[type="radio"] { display:none; }
+  .toggle-group label {
+    padding:5px 12px; font-size:0.75rem; font-weight:600; cursor:pointer;
+    color:var(--muted); border-right:1px solid var(--border); transition:all .12s; white-space:nowrap;
+  }
+  .toggle-group label:last-of-type { border-right:none; }
+  .toggle-group input:checked + label { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .toggle-group input[value="Present"]:checked + label { color:#15803D; background:#F0FDF4; }
+  .toggle-group input[value="Absent"]:checked  + label { color:#B91C1C; background:#FEF2F2; }
+  .toggle-group input[value="Late"]:checked    + label { color:#92400E; background:#FFFBEB; }
+  .toggle-group input[value="On Leave"]:checked + label { color:#1E40AF; background:#EFF6FF; }
+  .notes-input { padding:5px 9px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:0.78rem; color:var(--text); background:var(--surface); outline:none; width:140px; }
+  .notes-input:focus { border-color:var(--coral); }
+  .rate-bar { width:80px; height:6px; background:var(--bg); border-radius:3px; overflow:hidden; display:inline-block; vertical-align:middle; margin-right:6px; }
+  .rate-fill { height:100%; border-radius:3px; }
+  .teacher-avatar { width:32px; height:32px; border-radius:50%; background:var(--coral-bg,#FDF0ED); color:var(--coral,#e05c3a); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:0.72rem; margin-right:10px; flex-shrink:0; }
+  .teacher-cell { display:flex; align-items:center; }
+  .teacher-info strong { display:block; }
+  .teacher-info span { font-size:0.75rem; color:var(--muted); }
+  .saved-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.7rem; font-weight:600; }
+  .status-Present { background:#DCFCE7; color:#15803D; }
+  .status-Absent  { background:#FEE2E2; color:#B91C1C; }
+  .status-Late    { background:#FEF3C7; color:#92400E; }
+  .status-On\.Leave { background:#DBEAFE; color:#1E40AF; }
+  @media(max-width:700px) { .stats-row { grid-template-columns:repeat(2,1fr); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-title">Teacher Attendance</div>
+    <div class="page-sub">Track daily teacher presence and monthly trends</div>
+  </div>
+</div>
+
+<!-- Date picker -->
+<div class="filter-bar">
+  <form method="GET" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <label for="date-pick">Date:</label>
+    <input type="date" id="date-pick" name="date" value="{{ sel_date.isoformat() }}"
+           max="{{ today.isoformat() }}" onchange="this.form.submit()">
+    {% if sel_date != today %}
+      <a href="{{ url_for('teacher_attendance_page') }}" class="btn btn-ghost">Today</a>
+    {% endif %}
+  </form>
+  <span style="font-size:0.82rem;color:var(--muted);">
+    {{ sel_date.strftime('%A, %d %B %Y') }}
+    {% if sel_date == today %}<span style="margin-left:8px;background:#DCFCE7;color:#15803D;padding:2px 8px;border-radius:20px;font-size:0.72rem;font-weight:600;">Today</span>{% endif %}
+  </span>
+</div>
+
+<!-- Stats -->
+{% set present_n = records.values() | selectattr('status','equalto','Present') | list | length %}
+{% set absent_n  = records.values() | selectattr('status','equalto','Absent')  | list | length %}
+{% set late_n    = records.values() | selectattr('status','equalto','Late')    | list | length %}
+{% set leave_n   = records.values() | selectattr('status','equalto','On Leave')| list | length %}
+{% set marked_n  = records|length %}
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-val" style="color:#15803D;">{{ present_n }}</div>
+    <div class="stat-lbl">Present</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#B91C1C;">{{ absent_n }}</div>
+    <div class="stat-lbl">Absent</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:#92400E;">{{ late_n }}</div>
+    <div class="stat-lbl">Late</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--muted);">{{ teachers|length - marked_n }}</div>
+    <div class="stat-lbl">Not Marked</div>
+  </div>
+</div>
+
+<!-- Attendance form -->
+<div class="card">
+  <div class="card-head">
+    <h3>Mark Attendance – {{ sel_date.strftime('%d %b %Y') }}</h3>
+    <button form="att-form" type="submit" class="btn btn-primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Save
+    </button>
+  </div>
+  <form id="att-form" method="POST" action="{{ url_for('mark_teacher_attendance') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="date" value="{{ sel_date.isoformat() }}">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Teacher</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th>Month Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in teachers %}
+          {% set rec = records.get(t.id) %}
+          {% set cur = rec.status if rec else 'Present' %}
+          <tr>
+            <td>
+              <div class="teacher-cell">
+                <div class="teacher-avatar">
+                  {{ t.name.split()[0][0] }}{{ t.name.split()[-1][0] if t.name.split()|length > 1 else '' }}
+                </div>
+                <div class="teacher-info">
+                  <strong>{{ t.name }}</strong>
+                  <span>{{ t.email }}</span>
+                </div>
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:0.82rem;">{{ t.subject }}</td>
+            <td>
+              <input type="hidden" name="teacher_ids" value="{{ t.id }}">
+              <div class="toggle-group">
+                {% for s in ['Present','Late','Absent','On Leave'] %}
+                <input type="radio" name="status_{{ t.id }}" value="{{ s }}" id="s_{{ t.id }}_{{ loop.index }}"
+                  {{ 'checked' if cur == s else '' }}>
+                <label for="s_{{ t.id }}_{{ loop.index }}">{{ s }}</label>
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              <input class="notes-input" type="text" name="notes_{{ t.id }}"
+                value="{{ rec.notes or '' }}" placeholder="Optional note…">
+            </td>
+            <td>
+              {% set stats = teacher_stats.get(t.id, {}) %}
+              {% if stats.get('rate') is not none %}
+                <div class="rate-bar">
+                  <div class="rate-fill" style="width:{{ stats.rate }}%;background:{% if stats.rate >= 80 %}#22c55e{% elif stats.rate >= 60 %}#F0A832{% else %}#ef4444{% endif %};"></div>
+                </div>
+                <span style="font-size:0.78rem;">{{ stats.rate }}%</span>
+                <span style="font-size:0.7rem;color:var(--muted);"> ({{ stats.present }}/{{ stats.total }})</span>
+              {% else %}
+                <span style="font-size:0.75rem;color:var(--muted);">No data</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center;padding:50px;color:var(--muted);">No active teachers found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+{% endblock %}

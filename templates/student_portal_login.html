@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal – Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;1,300&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --student: #6366F1; --student-bg: #EEF2FF; --student-mid: #A5B4FC;
+      --bg: #FAFAF8; --surface: #FFFFFF; --text: #1C1C1A; --muted: #7A7972;
+      --border: #EBEBEA; --radius: 20px; --radius-sm: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg);
+      color: var(--text); min-height: 100vh;
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .brand-panel {
+      background: var(--student); display: flex; flex-direction: column;
+      justify-content: space-between; padding: 48px 52px;
+      position: relative; overflow: hidden;
+    }
+    .brand-panel::before {
+      content:''; position:absolute; top:-80px; right:-80px;
+      width:340px; height:340px; border-radius:50%;
+      background:rgba(255,255,255,0.08);
+    }
+    .brand-panel::after {
+      content:''; position:absolute; bottom:-40px; left:60px;
+      width:200px; height:200px; border-radius:50%;
+      background:rgba(255,255,255,0.06);
+    }
+    .brand-logo { font-family:'Fraunces',serif; font-size:1.6rem; font-weight:600; color:#fff; position:relative; z-index:1; }
+    .brand-logo span { opacity:0.7; }
+    .brand-headline { position:relative; z-index:1; }
+    .brand-headline h1 { font-family:'Fraunces',serif; font-size:2.4rem; font-weight:300; color:#fff; line-height:1.25; margin-bottom:12px; }
+    .brand-headline p { font-size:0.9rem; color:rgba(255,255,255,0.7); line-height:1.6; }
+    .brand-features { display:flex; flex-direction:column; gap:12px; position:relative; z-index:1; }
+    .feat { display:flex; align-items:center; gap:10px; }
+    .feat-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.5); flex-shrink:0; }
+    .feat span { font-size:0.82rem; color:rgba(255,255,255,0.75); }
+    .login-panel { display:flex; align-items:center; justify-content:center; padding:48px 52px; }
+    .login-box { width:100%; max-width:400px; }
+    .login-box h2 { font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; margin-bottom:6px; }
+    .login-box p { font-size:0.85rem; color:var(--muted); margin-bottom:32px; }
+    .form-group { margin-bottom:18px; }
+    label { display:block; font-size:0.8rem; font-weight:600; color:var(--text); margin-bottom:7px; }
+    input {
+      width:100%; padding:12px 16px; border:1.5px solid var(--border);
+      border-radius:var(--radius-sm); font-family:inherit; font-size:0.9rem;
+      color:var(--text); background:var(--surface); outline:none;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    input:focus { border-color:var(--student); box-shadow:0 0 0 4px rgba(99,102,241,0.1); }
+    .btn-login {
+      width:100%; padding:13px; background:var(--student); color:#fff;
+      border:none; border-radius:var(--radius-sm); font-family:inherit;
+      font-size:0.9rem; font-weight:600; cursor:pointer;
+      transition:opacity .15s; margin-top:8px;
+    }
+    .btn-login:hover { opacity:0.9; }
+    .error-box {
+      background:#FEF2F2; border:1px solid #FCA5A5; border-radius:var(--radius-sm);
+      padding:10px 14px; font-size:0.82rem; color:#B91C1C; margin-bottom:18px;
+    }
+    .back-link { display:block; text-align:center; margin-top:20px; font-size:0.82rem; color:var(--muted); text-decoration:none; }
+    .back-link:hover { color:var(--student); }
+    @media(max-width:680px) {
+      body { grid-template-columns:1fr; }
+      .brand-panel { display:none; }
+      .login-panel { padding:40px 24px; align-items:flex-start; padding-top:80px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="brand-panel">
+    <div class="brand-logo">School<span>App</span></div>
+    <div class="brand-headline">
+      <h1>Student<br>Portal</h1>
+      <p>Your personal window into<br>your academic journey.</p>
+    </div>
+    <div class="brand-features">
+      <div class="feat"><div class="feat-dot"></div><span>View exam results & grades</span></div>
+      <div class="feat"><div class="feat-dot"></div><span>Check your timetable</span></div>
+      <div class="feat"><div class="feat-dot"></div><span>Track attendance & fees</span></div>
+      <div class="feat"><div class="feat-dot"></div><span>Library borrow records</span></div>
+    </div>
+  </div>
+
+  <div class="login-panel">
+    <div class="login-box">
+      <h2>Welcome back</h2>
+      <p>Sign in with your student portal credentials</p>
+
+      {% if error %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Your student ID or username" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+        <button class="btn-login" type="submit">Sign in to Portal</button>
+      </form>
+
+      <a href="{{ url_for('login_page') }}" class="back-link">← Staff login</a>
+    </div>
+  </div>
+</body>
+</html>
