@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Enrollment – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Typography & Header */
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    /* Layout Container */
+    .enrollment-container { max-width: 900px; margin: 0 auto; padding-bottom: 4rem; }
+
+    /* Course Info Card */
+    .course-info-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 24px;
+        border: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .course-info-card h2 { margin: 0; font-size: 1.25rem; color: var(--text-dark); }
+    .course-info-card p { margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Enrollment Panel */
+    .enrollment-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #f0f0f0;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+
+    .card-controls {
+        padding: 1.5rem 2rem;
+        background: #fafafa;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .selection-tools { display: flex; gap: 10px; align-items: center; }
+    .count-badge { 
+        background: var(--accent); 
+        color: white; 
+        padding: 4px 12px; 
+        border-radius: 20px; 
+        font-size: 0.8rem; 
+        font-weight: 600; 
+    }
+
+    /* Student List Styling */
+    .student-list { padding: 1rem 0; max-height: 500px; overflow-y: auto; }
+    
+    .student-row {
+        display: flex;
+        align-items: center;
+        padding: 12px 2rem;
+        transition: 0.2s;
+        cursor: pointer;
+        border-bottom: 1px solid #f9f9f9;
+    }
+    .student-row:hover { background-color: #fcfcfc; }
+    .student-row:last-child { border-bottom: none; }
+
+    .student-row input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-right: 18px;
+        cursor: pointer;
+        accent-color: var(--accent);
+    }
+
+    .student-details { flex: 1; }
+    .student-name { display: block; font-weight: 600; color: var(--text-dark); font-size: 0.95rem; }
+    .student-id { font-size: 0.8rem; color: var(--text-muted); }
+
+    .enrolled-tag {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #1e7a3c;
+        background: #e8f4ee;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+    }
+
+    /* Footer Actions */
+    .form-actions {
+        padding: 1.5rem 2rem;
+        background: #fff;
+        border-top: 1px solid #f0f0f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+        .card-controls { flex-direction: column; gap: 15px; align-items: flex-start; }
+        .selection-tools { width: 100%; justify-content: space-between; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="enrollment-container">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
+        <a href="{{ url_for('courses_page') }}" style="text-decoration:none; color:var(--text-muted); font-size:0.9rem;">← Back to Courses</a>
+        <h1 class="page-title">Manage <em>Enrollment</em></h1>
+    </div>
+
+    <div class="course-info-card">
+        <div>
+            <h2>{{ course.title }}</h2>
+            <p>Teacher: {{ course.teacher_name or 'Not Assigned' }} &middot; {{ course.session_type|capitalize }}</p>
+        </div>
+        <div id="countLabel" class="count-badge">0 Students Selected</div>
+    </div>
+
+    <div class="enrollment-card">
+        <div class="card-controls">
+            <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-muted);">Student Directory</span>
+            <div class="selection-tools">
+                <button type="button" class="btn-sm btn-ghost" onclick="toggleAll(true)" style="font-size:0.8rem;">Select All</button>
+                <button type="button" class="btn-sm btn-ghost" onclick="toggleAll(false)" style="font-size:0.8rem;">Deselect All</button>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('enroll_students', course_id=course.id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <div class="student-list" id="studentList">
+                {% if students %}
+                    {% for student in students %}
+                    <label class="student-row" for="st_{{ student.id }}">
+                        <input type="checkbox" name="student_ids" value="{{ student.id }}" id="st_{{ student.id }}" 
+                               {% if student.id in enrolled_ids %}checked{% endif %} onchange="updateCount()">
+                        
+                        <div class="student-details">
+                            <span class="student-name">{{ student.first_name }} {{ student.surname }}</span>
+                            <span class="student-id">{{ student.id_number }} &middot; {{ student.stream or 'No Stream' }}</span>
+                        </div>
+
+                        {% if student.id in enrolled_ids %}
+                        <span class="enrolled-tag">Already Enrolled</span>
+                        {% endif %}
+                    </label>
+                    {% endfor %}
+                {% else %}
+                    <div style="padding: 4rem; text-align: center; color: var(--text-muted);">
+                        <p>No students found in the registry.</p>
+                        <a href="{{ url_for('students_page') }}" class="btn-sm btn-primary-custom" style="text-decoration:none; display:inline-block; margin-top:10px;">Add Students</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('courses_page') }}" class="btn-cancel" style="text-decoration:none; font-weight:600; color:#64748b; align-self:center; margin-right:10px; font-size:0.9rem;">Discard</a>
+                <button type="submit" class="btn-primary-custom" style="padding: 12px 30px;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="margin-right:8px; vertical-align:middle;">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Confirm & Save Enrollment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleAll(state) {
+        document.querySelectorAll('#studentList input[type="checkbox"]').forEach(cb => {
+            cb.checked = state;
+        });
+        updateCount();
+    }
+
+    function updateCount() {
+        const total = document.querySelectorAll('#studentList input[type="checkbox"]').length;
+        const checked = document.querySelectorAll('#studentList input[type="checkbox"]:checked').length;
+        const label = document.getElementById('countLabel');
+        label.textContent = `${checked} / ${total} Students Selected`;
+        
+        // Visual feedback for the badge
+        if (checked > 0) {
+            label.style.background = 'var(--accent)';
+        } else {
+            label.style.background = '#94a3b8';
+        }
+    }
+
+    // Initialize count on load
+    document.addEventListener('DOMContentLoaded', updateCount);
+</script>
+{% endblock %}

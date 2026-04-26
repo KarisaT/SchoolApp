@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Portal – SchoolApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;1,300&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --coral:     #E8614A; --coral-bg: #FDF0ED; --coral-mid: #F5B5A8;
+      --amber:     #F0A832; --amber-bg: #FEF6E4;
+      --sky:       #EFF6FF;
+      --green:     #F0FDF4; --green-mid: #86EFAC;
+      --bg:        #FAFAF8; --surface: #FFFFFF;
+      --text:      #1C1C1A; --muted: #7A7972;
+      --border:    #EBEBEA;
+      --radius:    20px; --radius-sm: 12px;
+      --student:   #6366F1;  /* indigo accent for student portal */
+      --student-bg:#EEF2FF;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Top nav ── */
+    .portal-nav {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 32px; display: flex; align-items: center; justify-content: space-between;
+      height: 60px; position: sticky; top: 0; z-index: 50;
+    }
+    .nav-brand { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 600; color: var(--text); }
+    .nav-brand span { color: var(--student); }
+    .nav-pill { background: var(--student-bg); color: var(--student); border-radius: 20px; padding: 4px 14px; font-size: 0.75rem; font-weight: 700; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-student-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    .btn-logout { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 0.8rem; font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: none; font-family: inherit; transition: all 0.12s; }
+    .btn-logout:hover { color: var(--coral); border-color: var(--coral-mid); }
+
+    /* ── Tab nav ── */
+    .tab-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 32px; display: flex; gap: 2px; overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 14px 18px; border: none; background: none; cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.84rem; font-weight: 500;
+      color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s;
+      white-space: nowrap; display: flex; align-items: center; gap: 7px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--student); border-bottom-color: var(--student); font-weight: 600; }
+
+    /* ── Content ── */
+    .portal-body { max-width: 1000px; margin: 0 auto; padding: 32px 24px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Welcome card ── */
+    .welcome-card {
+      background: linear-gradient(135deg, #4F46E5 0%, #6366F1 50%, #818CF8 100%);
+      border-radius: var(--radius); padding: 28px 32px; color: #fff; margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .welcome-greeting { font-size: 0.8rem; opacity: 0.7; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    .welcome-name { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 300; margin-bottom: 4px; }
+    .welcome-sub { font-size: 0.82rem; opacity: 0.65; }
+    .welcome-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+    .w-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 14px; font-size: 0.75rem; font-weight: 600; }
+
+    /* ── Quick stats ── */
+    .quick-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+    .qs { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .qs-val { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+    .qs-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 600; }
+
+    /* ── Section card ── */
+    .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+    .section-head { padding: 16px 22px; border-bottom: 1px solid var(--border); }
+    .section-head h3 { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; }
+    .section-head p { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Timetable mini ── */
+    .mini-tt { display: grid; grid-template-columns: 90px 1fr; }
+    .mini-tt-row { display: contents; }
+    .mini-tt-time { padding: 12px 16px; background: var(--bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 0.75rem; font-weight: 600; color: var(--muted); display: flex; align-items: center; }
+    .mini-tt-slots { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+    .slot-chip { background: var(--student-bg); color: var(--student); border-radius: 8px; padding: 6px 12px; font-size: 0.78rem; font-weight: 600; }
+    .slot-chip span { font-weight: 400; color: #818CF8; margin-left: 4px; }
+
+    /* ── Results table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .data-table th { text-align: left; padding: 10px 20px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .data-table td { padding: 13px 20px; border-bottom: 1px solid var(--border); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .grade-pill { font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; display: inline-block; }
+    .grade-a  { background: #dcfce7; color: #15803D; }
+    .grade-b  { background: var(--student-bg); color: var(--student); }
+    .grade-c  { background: var(--amber-bg); color: #92400e; }
+    .grade-d  { background: #FEE2E2; color: #B91C1C; }
+    .progress-mini { width: 80px; height: 6px; background: var(--border); border-radius: 100px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 8px; }
+    .progress-mini-fill { height: 100%; border-radius: 100px; }
+
+    /* ── Attendance dots ── */
+    .att-grid { display: flex; flex-wrap: wrap; gap: 4px; padding: 20px; }
+    .att-dot { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 700; cursor: default; }
+    .att-dot.present { background: #dcfce7; color: #15803D; }
+    .att-dot.absent  { background: #FEE2E2; color: #B91C1C; }
+    .att-dot.none    { background: var(--border); }
+    .att-summary { display: flex; gap: 20px; padding: 14px 20px; border-top: 1px solid var(--border); }
+    .att-sum-item { font-size: 0.8rem; color: var(--muted); }
+    .att-sum-item strong { color: var(--text); }
+
+    /* ── Fee card ── */
+    .fee-overview { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
+    .fee-box { border-radius: var(--radius-sm); padding: 18px; }
+    .fee-box.balance { background: #FEF9C3; border: 1px solid #FDE047; }
+    .fee-box.paid    { background: #dcfce7; border: 1px solid #86EFAC; }
+    .fee-box-lbl  { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 6px; }
+    .fee-box.balance .fee-box-lbl { color: #854D0E; }
+    .fee-box.paid    .fee-box-lbl { color: #15803D; }
+    .fee-box-val  { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 600; line-height: 1; }
+    .fee-box.balance .fee-box-val { color: #92400e; }
+    .fee-box.paid    .fee-box-val { color: #15803D; }
+    .fee-box-sub  { font-size: 0.75rem; margin-top: 4px; opacity: 0.7; }
+
+    .fee-table-wrap { padding: 0 0 0; }
+    .fee-row { display: flex; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border); gap: 12px; }
+    .fee-row-name { flex: 1; font-size: 0.85rem; font-weight: 600; }
+    .fee-row-date { font-size: 0.75rem; color: var(--muted); }
+    .fee-row-amount { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; }
+    .fee-row-status { font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .paid-badge   { background: #dcfce7; color: #15803D; }
+    .unpaid-badge { background: #FEE2E2; color: #B91C1C; }
+
+    .mpesa-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: #00A651; color: #fff; border: none; border-radius: var(--radius-sm);
+      padding: 10px 20px; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer; text-decoration: none;
+      margin: 16px 20px 20px; transition: opacity 0.15s;
+    }
+    .mpesa-btn:hover { opacity: 0.9; }
+
+    @media (max-width: 640px) {
+      .portal-nav { padding: 0 16px; }
+      .tab-bar { padding: 0 16px; }
+      .portal-body { padding: 20px 16px; }
+      .welcome-card { padding: 20px; }
+      .quick-stats { grid-template-columns: 1fr 1fr; }
+      .fee-overview { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="portal-nav">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="nav-brand">School<span>App</span></div>
+    <span class="nav-pill">Student Portal</span>
+  </div>
+  <div class="nav-right">
+    <span class="nav-student-name">{{ student.first_name }} {{ student.surname }}</span>
+    <a href="{{ url_for('student_logout') }}" class="btn-logout">Sign out</a>
+  </div>
+</nav>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('overview', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Overview
+  </button>
+  <button class="tab-btn" onclick="switchTab('timetable', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Timetable
+  </button>
+  <button class="tab-btn" onclick="switchTab('results', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Results
+  </button>
+  <button class="tab-btn" onclick="switchTab('attendance', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    Attendance
+  </button>
+  <button class="tab-btn" onclick="switchTab('fees', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Fees
+  </button>
+</div>
+
+<div class="portal-body">
+
+  <!-- ── Overview ── -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="welcome-card">
+      <div>
+        <div class="welcome-greeting">Welcome back</div>
+        <div class="welcome-name">{{ student.first_name }} {{ student.surname }}</div>
+        <div class="welcome-sub">ID: {{ student.id_number }} · {{ active_term.name if active_term else 'No active term' }}</div>
+      </div>
+      <div class="welcome-badges">
+        <div class="w-badge">📚 {{ enrolled_courses }} Courses</div>
+        <div class="w-badge">{{ attendance_pct }}% Attendance</div>
+        {% if fee_balance > 0 %}<div class="w-badge" style="background:rgba(239,68,68,0.2);">⚠ Fee Balance</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="quick-stats">
+      <div class="qs">
+        <div class="qs-val" style="color:var(--student);">{{ attendance_pct }}%</div>
+        <div class="qs-lbl">Attendance Rate</div>
+      </div>
+      <div class="qs">
+        <div class="qs-val">{{ average_score }}%</div>
+        <div class="qs-lbl">Average Score</div>
+      </div>
+      <div class="qs">
+        <div class="qs-val" style="color:{% if fee_balance > 0 %}#B91C1C{% else %}#15803D{% endif %};">KES {{ fee_balance | int }}</div>
+        <div class="qs-lbl">Fee Balance</div>
+      </div>
+    </div>
+
+    <!-- Next class -->
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Today's Schedule</h3>
+        <p>{{ today_date }}</p>
+      </div>
+      {% if today_classes %}
+      <div style="padding: 8px 0;">
+        {% for cls in today_classes %}
+        <div style="display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:1px solid var(--border);">
+          <div style="width:56px;text-align:center;">
+            <div style="font-size:0.72rem;color:var(--muted);font-weight:600;">{{ cls.start_time }}</div>
+            <div style="font-size:0.65rem;color:var(--border);">↓</div>
+            <div style="font-size:0.72rem;color:var(--muted);">{{ cls.end_time }}</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:0.9rem;">{{ cls.course.title }}</div>
+            <div style="font-size:0.78rem;color:var(--muted);">Room {{ cls.room or 'TBD' }}</div>
+          </div>
+          <div class="slot-chip">{{ cls.day }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:40px;text-align:center;color:var(--muted);font-size:0.85rem;">No classes scheduled for today.</div>
+      {% endif %}
+    </div>
+
+    <!-- Recent results -->
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Recent Results</h3>
+        <p>Latest exam scores</p>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Subject</th><th>Exam</th><th>Score</th><th>Grade</th></tr></thead>
+        <tbody>
+          {% for r in recent_results %}
+          <tr>
+            <td style="font-weight:600;">{{ r.exam.course.title }}</td>
+            <td style="color:var(--muted);font-size:0.82rem;">{{ r.exam.name }}</td>
+            <td>
+              <div class="progress-mini"><div class="progress-mini-fill" style="width:{{ r.score }}%;background:{% if r.score >= 70 %}#22c55e{% elif r.score >= 50 %}#F0A832{% else %}#ef4444{% endif %};"></div></div>
+              {{ r.score }}%
+            </td>
+            <td><span class="grade-pill grade-{{ r.grade | lower }}">{{ r.grade }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted);">No results yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Timetable ── -->
+  <div class="tab-panel" id="tab-timetable">
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Weekly Timetable</h3>
+        <p>{{ active_term.name if active_term else '' }}</p>
+      </div>
+      <div class="mini-tt">
+        {% for time, slots in timetable.items() %}
+        <div class="mini-tt-time">{{ time }}</div>
+        <div class="mini-tt-slots">
+          {% for slot in slots %}
+          <div class="slot-chip">{{ slot.course.title }}<span>{{ slot.room or 'TBD' }}</span></div>
+          {% else %}
+          <span style="color:var(--border);font-size:0.75rem;">Free</span>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Results ── -->
+  <div class="tab-panel" id="tab-results">
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Exam Results</h3>
+        <p>All recorded scores for {{ active_term.name if active_term else 'current period' }}</p>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Course</th><th>Exam</th><th>Date</th><th>Score</th><th>Grade</th></tr></thead>
+          <tbody>
+            {% for r in all_results %}
+            <tr>
+              <td style="font-weight:600;">{{ r.exam.course.title }}</td>
+              <td>{{ r.exam.name }}</td>
+              <td style="color:var(--muted);font-size:0.8rem;white-space:nowrap;">{{ r.exam.date }}</td>
+              <td>
+                <div class="progress-mini"><div class="progress-mini-fill" style="width:{{ r.score }}%;background:{% if r.score >= 70 %}#22c55e{% elif r.score >= 50 %}#F0A832{% else %}#ef4444{% endif %};"></div></div>
+                {{ r.score }}%
+              </td>
+              <td><span class="grade-pill grade-{{ r.grade | lower }}">{{ r.grade }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;padding:50px;color:var(--muted);">No results recorded yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Attendance ── -->
+  <div class="tab-panel" id="tab-attendance">
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Attendance Record</h3>
+        <p>Each square = one school day this term</p>
+      </div>
+      <div class="att-grid">
+        {% for day in attendance_days %}
+        <div class="att-dot {{ day.status | lower }}" title="{{ day.date }}: {{ day.status }}">
+          {{ 'P' if day.status == 'Present' else 'A' if day.status == 'Absent' else '' }}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="att-summary">
+        <div class="att-sum-item">Present: <strong style="color:#15803D;">{{ present_count }}</strong></div>
+        <div class="att-sum-item">Absent: <strong style="color:#B91C1C;">{{ absent_count }}</strong></div>
+        <div class="att-sum-item">Rate: <strong>{{ attendance_pct }}%</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Fees ── -->
+  <div class="tab-panel" id="tab-fees">
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Fee Statement</h3>
+        <p>{{ active_term.name if active_term else 'Current period' }}</p>
+      </div>
+      <div class="fee-overview">
+        <div class="fee-box balance">
+          <div class="fee-box-lbl">Outstanding Balance</div>
+          <div class="fee-box-val">KES {{ fee_balance | int }}</div>
+          <div class="fee-box-sub">Due by {{ next_due_date or 'N/A' }}</div>
+        </div>
+        <div class="fee-box paid">
+          <div class="fee-box-lbl">Total Paid</div>
+          <div class="fee-box-val">KES {{ total_paid | int }}</div>
+          <div class="fee-box-sub">{{ payment_count }} payment(s) recorded</div>
+        </div>
+      </div>
+      <div class="fee-table-wrap">
+        {% for item in fee_items %}
+        <div class="fee-row">
+          <div class="fee-row-name">{{ item.description }}</div>
+          <div class="fee-row-date">{{ item.date }}</div>
+          <div class="fee-row-amount">KES {{ item.amount | int }}</div>
+          <span class="fee-row-status {% if item.paid %}paid-badge{% else %}unpaid-badge{% endif %}">
+            {{ 'Paid' if item.paid else 'Unpaid' }}
+          </span>
+        </div>
+        {% else %}
+        <div style="padding:40px;text-align:center;color:var(--muted);font-size:0.85rem;">No fee records found.</div>
+        {% endfor %}
+      </div>
+      {% if fee_balance > 0 %}
+      <a href="{{ url_for('student_mpesa_pay') }}" class="mpesa-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Pay via M-Pesa
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+</div><!-- /portal-body -->
+
+<script>
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

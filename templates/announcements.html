@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Notices – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Typography & Branding */
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    /* Centered Layout Container */
+    .announcement-container { max-width: 800px; margin: 0 auto; padding-bottom: 4rem; }
+
+    /* Post Creation Card */
+    .post-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        border: 1px solid #f0f0f0;
+    }
+    .post-textarea {
+        width: 100%;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1rem;
+        font-size: 1rem;
+        min-height: 100px;
+        resize: none;
+        background: #fafafa;
+        transition: 0.2s;
+        font-family: inherit;
+    }
+    .post-textarea:focus {
+        outline: none;
+        background: #fff;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(46, 91, 138, 0.08);
+    }
+    .post-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 1rem;
+        gap: 15px;
+    }
+
+    /* Notice Board Feed */
+    .notice-board-header {
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .notice-board-header h2 { font-size: 1.2rem; font-weight: 600; color: var(--text-dark); }
+
+    .notice-item {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #f0f0f0;
+        position: relative;
+        transition: transform 0.2s;
+    }
+    .notice-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+
+    /* Pinned State */
+    .notice-item.is-pinned {
+        border-left: 4px solid var(--amber);
+        background: #fffdf9;
+    }
+    .pin-indicator {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--amber);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .notice-meta {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .notice-content {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-dark);
+        white-space: pre-wrap;
+    }
+
+    /* Action Buttons within items */
+    .item-controls {
+        margin-top: 1rem;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+    .btn-icon-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: var(--text-muted);
+        transition: 0.2s;
+        text-decoration: none;
+    }
+    .btn-icon-text:hover { background: #f5f5f5; color: var(--text-dark); }
+    .btn-delete:hover { color: #c0392b; background: #fee2e2; }
+
+    @media (max-width: 600px) {
+        .announcement-container { padding: 1rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="announcement-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Notice <em>Board</em></h1>
+            <p class="page-subtitle">Share updates and important announcements with the school.</p>
+        </div>
+    </div>
+
+    <div class="post-card">
+        <form method="POST" action="{{ url_for('add_announcement') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="title" class="post-textarea" placeholder="Announcement title..." required style="min-height:unset; padding: 0.75rem 1rem; margin-bottom: 0.75rem;">
+            <textarea name="body" class="post-textarea" placeholder="What's the latest update?..." required></textarea>
+            <div class="post-actions">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Posts are visible to all faculty.</span>
+                <button type="submit" class="btn-primary-custom" style="padding: 10px 24px;">
+                    Post Announcement
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="notice-board-header">
+        <h2>Latest Updates</h2>
+    </div>
+
+    {% if not announcements %}
+    <div style="text-align:center; padding: 60px 0; color: var(--text-muted);">
+        <p>No announcements have been posted yet.</p>
+    </div>
+    {% endif %}
+
+    {% for a in announcements %}
+    <div class="notice-item {% if a.pinned %}is-pinned{% endif %}">
+        {% if a.pinned %}
+        <div class="pin-indicator">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M16 9V4l1 0V2H7v2h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+            Pinned Announcement
+        </div>
+        {% endif %}
+        
+        <div class="notice-meta">
+            <span>Posted by Management</span>
+            <span>{{ a.created_at.strftime('%d %b, %Y • %H:%M') if a.created_at else 'Just now' }}</span>
+        </div>
+
+        <div class="notice-content"><strong>{{ a.title }}</strong><br>{{ a.body }}</div>
+
+        <div class="item-controls">
+            <form method="POST" action="{{ url_for('pin_announcement', id=a.id) }}" style="display:inline;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-icon-text">
+                    {{ 'Unpin' if a.pinned else 'Pin to top' }}
+                </button>
+            </form>
+            
+            <form method="POST" action="{{ url_for('delete_announcement', id=a.id) }}" onsubmit="return confirm('Delete this announcement permanentely?')" style="display:inline;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-icon-text btn-delete">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

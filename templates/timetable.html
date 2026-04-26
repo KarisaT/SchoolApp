@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Timetable – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Typography & Header */
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    /* Layout Container */
+    .timetable-container { max-width: 1100px; margin: 0 auto; padding-bottom: 4rem; }
+
+    /* Timetable Grid System */
+    .tt-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+
+    .tt-header-row {
+        display: grid;
+        grid-template-columns: 100px repeat(5, 1fr);
+        background: #fafafa;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .tt-head-cell {
+        padding: 20px 10px;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+
+    .tt-body-row {
+        display: grid;
+        grid-template-columns: 100px repeat(5, 1fr);
+        border-bottom: 1px solid #f8f8f8;
+    }
+    .tt-body-row:last-child { border-bottom: none; }
+
+    .tt-time-cell {
+        padding: 20px 15px;
+        background: #fcfcfc;
+        border-right: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .tt-slot {
+        padding: 8px;
+        min-height: 100px;
+        border-right: 1px solid #f8f8f8;
+        transition: 0.2s;
+    }
+    .tt-slot:hover { background-color: #fafafa; }
+
+    /* Entry Styling */
+    .entry-box {
+        background: #f0f4ff;
+        border-left: 3px solid var(--accent);
+        padding: 10px;
+        border-radius: 8px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+    }
+    .entry-title {
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #2e5b8a;
+        margin-bottom: 4px;
+        display: block;
+        line-height: 1.2;
+    }
+    .entry-meta {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    /* Delete Button within Entry */
+    .btn-delete-slot {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: none;
+        border: none;
+        color: #cbd5e1;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        opacity: 0;
+        transition: 0.2s;
+    }
+    .entry-box:hover .btn-delete-slot { opacity: 1; color: #ef4444; }
+
+    /* Modal Styling Override */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+        display: none; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-content {
+        background: white; border-radius: 16px; padding: 2rem;
+        width: 100%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    /* ── Responsive: allow horizontal scroll on small screens ── */
+    .tt-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+    }
+    .tt-card {
+        min-width: 640px; /* keeps grid readable; scrolls on narrow screens */
+    }
+
+    @media (max-width: 900px) {
+        .timetable-container { padding-left: 0; padding-right: 0; }
+        .tt-head-cell, .tt-time-cell, .tt-slot { padding: 8px 6px; }
+        .entry-title { font-size: 0.78rem; }
+        .entry-meta  { font-size: 0.68rem; }
+    }
+
+    @media (max-width: 600px) {
+        .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .page-title  { font-size: 1.8rem; }
+        .tt-time-cell { font-size: 0.72rem; padding: 8px 6px; }
+        .tt-slot { min-height: 70px; padding: 4px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="timetable-container">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem;">
+        <div>
+            <h1 class="page-title">Weekly <em>Schedule</em></h1>
+            <p class="page-subtitle">Academic timeline and room allocations</p>
+        </div>
+        <button class="btn-primary-custom" onclick="openModal()" style="padding: 12px 24px;">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" style="margin-right:8px;">
+                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add New Slot
+        </button>
+    </div>
+
+    <div class="tt-wrap">
+        <div class="tt-card">
+            <div class="tt-header-row">
+                <div class="tt-head-cell">Time</div>
+                {% for day in days %}
+                <div class="tt-head-cell">{{ day }}</div>
+                {% endfor %}
+            </div>
+
+            {% for time in times %}
+            <div class="tt-body-row">
+                <div class="tt-time-cell">{{ time }}</div>
+                {% for day in days %}
+                <div class="tt-slot">
+                    {% if grid[day][time] is defined %}
+                        {% set entry = grid[day][time] %}
+                        <div class="entry-box">
+                            <div>
+                                <span class="entry-title">{{ entry.course.title }}</span>
+                                <span class="entry-meta">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px; vertical-align:middle;">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    {{ entry.room or 'TBD' }}
+                                </span>
+                            </div>
+                            <div class="entry-meta" style="font-weight: 600; font-size: 0.7rem; margin-top: 8px;">
+                                {{ entry.start_time }} - {{ entry.end_time }}
+                            </div>
+
+                            <form method="POST" action="{{ url_for('delete_timetable', id=entry.id) }}" onsubmit="return confirm('Remove this slot?')">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn-delete-slot" title="Delete Slot">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div id="ttModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="font-family: 'Fraunces', serif; font-size: 1.5rem; margin-bottom: 1.5rem;">Schedule <em>Slot</em></h3>
+        <form method="POST" action="{{ url_for('timetable_page') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label" style="display:block; font-size:0.75rem; font-weight:700; margin-bottom:5px;">Select Course</label>
+                <select name="course_id" class="form-select" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                    {% for c in courses %}<option value="{{ c.id }}">{{ c.title }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 1rem;">
+                <div>
+                    <label class="form-label" style="display:block; font-size:0.75rem; font-weight:700; margin-bottom:5px;">Day</label>
+                    <select name="day" class="form-select" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                        {% for d in days %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" style="display:block; font-size:0.75rem; font-weight:700; margin-bottom:5px;">Room</label>
+                    <input name="room" placeholder="e.g. Lab 01" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 2rem;">
+                <div>
+                    <label class="form-label" style="display:block; font-size:0.75rem; font-weight:700; margin-bottom:5px;">Start Time</label>
+                    <input type="time" name="start_time" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                </div>
+                <div>
+                    <label class="form-label" style="display:block; font-size:0.75rem; font-weight:700; margin-bottom:5px;">End Time</label>
+                    <input type="time" name="end_time" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeModal()" class="btn-icon-text">Cancel</button>
+                <button type="submit" class="btn-primary-custom" style="padding: 10px 20px;">Save Slot</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openModal() { document.getElementById('ttModal').classList.add('open'); }
+    function closeModal() { document.getElementById('ttModal').classList.remove('open'); }
+    
+    // Close on outside click
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('ttModal')) closeModal();
+    }
+</script>
+{% endblock %}

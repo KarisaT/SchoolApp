@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SchoolApp · Sign In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;1,300&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --coral: #E8614A;
+      --coral-light: #FDF0ED;
+      --coral-mid: #F5B5A8;
+      --amber: #F0A832;
+      --amber-light: #FEF6E4;
+      --bg: #FAFAF8;
+      --surface: #FFFFFF;
+      --text: #1C1C1A;
+      --muted: #7A7972;
+      --border: #EBEBEA;
+      --radius: 20px;
+      --radius-sm: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .brand-panel {
+      background: var(--coral);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 48px 52px;
+      position: relative;
+      overflow: hidden;
+    }
+    .brand-panel::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 340px; height: 340px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+    }
+    .brand-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -40px; left: 60px;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .brand-logo {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.5px;
+      position: relative;
+      z-index: 1;
+    }
+    .brand-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--amber);
+      border-radius: 50%;
+      margin-left: 2px;
+      vertical-align: super;
+    }
+    .brand-headline { position: relative; z-index: 1; }
+    .brand-headline h2 {
+      font-family: 'Fraunces', serif;
+      font-size: 3rem;
+      font-weight: 300;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .brand-headline h2 em { font-style: italic; color: var(--amber); }
+    .brand-headline p { color: rgba(255,255,255,0.7); font-size: 0.95rem; line-height: 1.6; }
+    .brand-stats { display: flex; gap: 32px; position: relative; z-index: 1; }
+    .brand-stat-num {
+      font-family: 'Fraunces', serif;
+      font-size: 1.75rem; font-weight: 600; color: #fff;
+    }
+    .brand-stat-label {
+      font-size: 0.75rem; color: rgba(255,255,255,0.6);
+      text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;
+    }
+    .form-panel {
+      display: flex; align-items: center; justify-content: center; padding: 48px;
+    }
+    .form-inner { width: 100%; max-width: 380px; }
+    .form-eyebrow {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+      color: var(--coral); font-weight: 600; margin-bottom: 12px;
+    }
+    .form-title {
+      font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 300;
+      color: var(--text); letter-spacing: -0.5px; margin-bottom: 8px;
+    }
+    .form-subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 36px; }
+    .field-group { margin-bottom: 20px; }
+    .field-label {
+      font-size: 0.78rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: block;
+    }
+    .field-input {
+      width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      padding: 13px 16px; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.95rem; color: var(--text); background: var(--surface);
+      transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+    }
+    .field-input::placeholder { color: #C4C3BC; }
+    .field-input:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(232,97,74,0.1); }
+    .btn-submit {
+      width: 100%; background: var(--coral); color: #fff; border: none;
+      border-radius: var(--radius-sm); padding: 14px;
+      font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.15s, transform 0.1s; margin-top: 8px;
+    }
+    .btn-submit:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-submit:active { transform: none; opacity: 1; }
+    .alert-error {
+      background: #FDF0ED; border: 1.5px solid var(--coral-mid); color: #C04A35;
+      border-radius: var(--radius-sm); padding: 12px 16px;
+      font-size: 0.875rem; margin-bottom: 24px;
+    }
+    .demo-hint {
+      margin-top: 24px; padding: 14px 16px; background: var(--amber-light);
+      border-radius: var(--radius-sm); font-size: 0.8rem; color: #8A5E14;
+      border: 1px solid #FAC775;
+    }
+    .demo-hint strong { font-weight: 600; color: #7A5012; }
+    @media (max-width: 768px) {
+      body { grid-template-columns: 1fr; }
+      .brand-panel { display: none; }
+      .form-panel { padding: 32px 24px; }
+    }
+
+    @media (max-width: 768px) {
+      body { grid-template-columns: 1fr; }
+      .brand-panel { display: none; }
+      .form-panel { padding: 40px 24px; }
+    }
+    @media (max-width: 480px) {
+      .form-panel { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="brand-panel">
+    <div class="brand-logo">SchoolApp<span class="brand-dot"></span></div>
+    <div class="brand-headline">
+      <h2>Manage your<br><em>school</em> with ease.</h2>
+      <p>Track students, fees, exams, timetables<br>and more &mdash; all in one place.</p>
+    </div>
+    <div class="brand-stats">
+      <div>
+        <div class="brand-stat-num">100%</div>
+        <div class="brand-stat-label">Kenyan Schools</div>
+      </div>
+      <div>
+        <div class="brand-stat-num">M-PESA</div>
+        <div class="brand-stat-label">Payments Built-in</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="form-panel">
+    <div class="form-inner">
+      <p class="form-eyebrow">Admin Portal</p>
+      <h1 class="form-title">Welcome back</h1>
+      <p class="form-subtitle">Sign in to continue to your dashboard</p>
+
+      {% if error %}
+        <div class="alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('login_page') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="field-group">
+          <label for="username" class="field-label">Username</label>
+          <input type="text" id="username" name="username" class="field-input" placeholder="Enter your username" required autocomplete="username">
+        </div>
+        <div class="field-group">
+          <label for="password" class="field-label">Password</label>
+          <input type="password" id="password" name="password" class="field-input" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-submit">Sign In &rarr;</button>
+      </form>
+
+      <div class="demo-hint">
+        <strong>Demo credentials:</strong> username <strong>Groot</strong> &nbsp;&middot;&nbsp; password <strong>Av3ng3r</strong>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

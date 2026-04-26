@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+{% block title %}Students – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 5px;
+  margin-bottom: 22px; width: fit-content;
+}
+.tab-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 9px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem; font-weight: 600;
+  color: var(--muted); background: none; border: none;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.tab-btn svg { flex-shrink: 0; }
+.tab-btn:hover { background: var(--bg); color: var(--text); }
+.tab-btn.active { background: var(--coral-bg); color: var(--coral); }
+.tab-count {
+  background: var(--bg); color: var(--muted);
+  border-radius: 20px; padding: 1px 8px;
+  font-size: 0.72rem; font-weight: 700;
+}
+.tab-btn.active .tab-count { background: var(--coral-mid); color: #fff; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ── Avatar ── */
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--coral-bg); color: var(--coral);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.78rem; flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+/* ── Course chips ── */
+.course-chip {
+  display: inline-block; padding: 3px 10px;
+  background: var(--sky); color: #2563EB;
+  border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+  margin: 2px;
+}
+.no-courses { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+
+/* ── Action buttons ── */
+.action-row { display: flex; gap: 6px; align-items: center; }
+
+/* ── Report card grid ── */
+.rc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px; padding: 20px 22px;
+}
+.rc-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 16px;
+  text-decoration: none; color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.rc-card:hover {
+  border-color: var(--coral-mid);
+  box-shadow: 0 2px 12px rgba(232,97,74,0.1);
+  background: var(--coral-bg);
+}
+.rc-card-name { font-weight: 600; font-size: 0.88rem; }
+.rc-card-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+.rc-arrow { color: var(--muted); font-size: 1.1rem; margin-left: auto; }
+
+/* ── Enrol modal checkboxes ── */
+.enroll-label {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer; background: var(--surface);
+  transition: background 0.12s, border-color 0.12s;
+  font-size: 0.875rem;
+}
+.enroll-label:hover { background: var(--bg); }
+.enroll-label.checked { background: var(--coral-bg); border-color: var(--coral-mid); }
+.enroll-label input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--coral);
+  cursor: pointer; flex-shrink: 0;
+}
+
+/* ── Card subheader ── */
+.card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px; border-bottom: 1px solid var(--border);
+}
+.card-head h3 { font-size: 0.9rem; font-weight: 600; }
+.card-head-sub { font-size: 0.8rem; color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+    @media (max-width: 768px) {
+      .tab-bar { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 6px; }
+      .tab-btn { white-space: nowrap; font-size: 0.78rem; padding: 7px 12px; }
+      .search-row { flex-direction: column; align-items: stretch; }
+      .search-row input { width: 100%; }
+      .action-row { flex-wrap: wrap; }
+    }
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Students<em>.</em></h1>
+    <p class="page-subtitle">{{ students | length }} student{{ 's' if students | length != 1 }} registered</p>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('addStudentModal').classList.add('open')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Add Student
+  </button>
+</div>
+
+<!-- ── Tabs ─────────────────────────────────────────────── -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('students', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+    </svg>
+    All Students
+    <span class="tab-count">{{ students | length }}</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('reportcards', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    Report Cards
+    <span class="tab-count">{{ students | length }}</span>
+  </button>
+</div>
+
+<!-- ── Tab: All Students ─────────────────────────────────── -->
+<div id="tab-students" class="tab-pane active">
+  <div class="card">
+    <div class="card-head">
+      <h3>All Students</h3>
+      <span class="card-head-sub" id="studentCount">{{ students | length }} registered</span>
+      <select id="classFilter" onchange="filterByClass(this.value)"
+        style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:0.85rem;background:var(--surface);color:var(--text);cursor:pointer;">
+        <option value="">All Classes</option>
+        <option value="PP1">PP1</option>
+        <option value="PP2">PP2</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>ID Number</th>
+            <th>Stream</th>
+            <th>Enrolled Courses</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          <tr>
+            <td style="color:var(--muted);font-size:0.82rem;">{{ loop.index }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                {% if student.photo %}
+                  <div class="avatar" style="overflow:hidden;padding:0;">
+                    <img src="{{ student.photo }}" alt="{{ student.first_name }}" style="width:100%;height:100%;object-fit:cover;">
+                  </div>
+                {% else %}
+                  <div class="avatar">{{ student.first_name[0] }}{{ student.surname[0] }}</div>
+                {% endif %}
+                <div>
+                  <div style="font-weight:600;">{{ student.first_name }} {{ student.surname }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge badge-muted">{{ student.id_number }}</span></td>
+            <td>
+              <div>{{ student.stream or '—' }}</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">
+                Yr {{ student.year_of_study or 1 }}
+                {% if student.status != 'Active' %}
+                  &nbsp;<span style="color:#c0392b;font-weight:600;">{{ student.status }}</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if student.courses %}
+                {% for course in student.courses %}
+                  <span class="course-chip">{{ course.course_code or ("ID-" ~ course.id) }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="no-courses">None</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="action-row">
+                <button class="btn btn-secondary btn-sm"
+                  onclick="openEnrollModal({{ student.id }}, '{{ student.first_name }} {{ student.surname }}', [{{ student.courses | map(attribute='id') | list | join(',') }}])">
+                  Enrol
+                </button>
+                <a href="{{ url_for('edit_student', id=student.id) }}" class="btn btn-secondary btn-sm">Edit</a>
+                <button class="btn btn-secondary btn-sm"
+                  onclick="openPromoteModal({{ student.id }}, '{{ student.first_name }} {{ student.surname }}', '{{ student.stream or '' }}', {{ student.year_of_study or 1 }}, '{{ student.status }}')">
+                  ↑ Promote
+                </button>
+                <button class="btn btn-secondary btn-sm" style="color:#B91C1C;"
+                  onclick="confirmDelete({{ student.id }}, '{{ student.first_name }} {{ student.surname }}')">
+                  🗑 Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" style="text-align:center;color:var(--muted);padding:40px;">
+              No students yet. Add one using the button above.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab: Report Cards ─────────────────────────────────── -->
+<div id="tab-reportcards" class="tab-pane">
+  <div class="card">
+    <div class="card-head">
+      <h3>Report Cards</h3>
+      <span class="card-head-sub">Click a student to view their full academic report</span>
+    </div>
+    <div class="rc-grid">
+      {% for student in students %}
+      <a href="{{ url_for('student_report', student_id=student.id) }}" class="rc-card">
+        <div class="avatar" style="width:42px;height:42px;font-size:0.85rem;">
+          {{ student.first_name[0] }}{{ student.surname[0] }}
+        </div>
+        <div>
+          <div class="rc-card-name">{{ student.first_name }} {{ student.surname }}</div>
+          <div class="rc-card-sub">{{ student.id_number }}</div>
+          <div class="rc-card-sub">{{ student.courses | length }} course{{ 's' if student.courses | length != 1 }}</div>
+        </div>
+        <span class="rc-arrow">›</span>
+      </a>
+      {% else %}
+      <p style="color:var(--muted);font-size:0.875rem;padding:20px;">No students found.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Student Modal ─────────────────────────────────── -->
+<div class="modal-overlay" id="addStudentModal">
+  <div class="modal-box">
+    <div class="modal-title">Add Student</div>
+    <form method="POST" action="{{ url_for('add_student') }}" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <!-- Photo Upload -->
+      <div class="form-group">
+        <label class="form-label">Photo <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div id="photoPreview" style="width:64px;height:64px;border-radius:50%;background:var(--coral-bg);color:var(--coral);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;overflow:hidden;flex-shrink:0;border:2px solid var(--border);">
+            <span id="photoPlaceholder">📷</span>
+            <img id="photoImg" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div style="flex:1;">
+            <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.82rem;font-weight:600;cursor:pointer;color:var(--text);transition:border-color 0.15s;">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Photo
+            </label>
+            <input type="file" id="photoInput" name="photo" accept="image/jpeg,image/png,image/gif,image/webp"
+              style="display:none;" onchange="previewPhoto(this)">
+            <p style="font-size:0.73rem;color:var(--muted);margin-top:5px;">JPG, PNG or WebP · max 2 MB</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">First Name</label>
+        <input type="text" name="first_name" class="form-control" placeholder="e.g. James" required
+          oninput="updatePhotoPlaceholder()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Surname</label>
+        <input type="text" name="surname" class="form-control" placeholder="e.g. Kariuki" required
+          oninput="updatePhotoPlaceholder()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Class <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+        <select name="stream" class="form-control">
+          <option value="">— Select Class —</option>
+          <option value="PP1">PP1</option>
+          <option value="PP2">PP2</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Student ID</label>
+        <input type="text" class="form-control" placeholder="Auto-generated (e.g. STU011)" readonly
+          style="background:var(--bg);color:var(--muted);cursor:not-allowed;">
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:5px;">Assigned automatically by the system.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button"
+          onclick="document.getElementById('addStudentModal').classList.remove('open')"
+          class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Delete Confirmation Modal ─────────────────────────── -->
+<div class="modal-overlay" id="deleteStudentModal">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-title" style="color:var(--coral);">Delete Student?</div>
+    <p style="font-size:0.9rem;color:var(--muted);margin-bottom:8px;">
+      You are about to remove <strong id="deleteStudentName" style="color:var(--text);"></strong>.
+    </p>
+    <p style="font-size:0.82rem;color:var(--muted);">This action cannot be undone.</p>
+    <div class="modal-footer">
+      <button type="button"
+        onclick="document.getElementById('deleteStudentModal').classList.remove('open')"
+        class="btn btn-secondary">Cancel</button>
+      <form id="deleteStudentForm" method="POST" style="display:inline;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary" style="background:var(--coral);">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Enrol Student Modal ────────────────────────────────── -->
+<div class="modal-overlay" id="enrollStudentModal">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-title">
+      Enrol — <span id="enrollStudentName" style="color:var(--coral);"></span>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;">
+      Tick the courses this student should be enrolled in.
+    </p>
+    <form id="enrollForm" method="POST">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;padding-right:4px;">
+        {% for course in courses %}
+        <label class="enroll-label" id="enroll-label-{{ course.id }}">
+          <input type="checkbox" name="course_ids" value="{{ course.id }}"
+            class="enroll-checkbox" id="enroll-cb-{{ course.id }}"
+            onchange="toggleEnrollLabel(this)">
+          <div>
+            <div style="font-weight:600;color:var(--text);">{{ course.title }}</div>
+            {% if course.teacher_name %}
+            <div style="font-size:0.76rem;color:var(--muted);">{{ course.teacher_name }}</div>
+            {% endif %}
+          </div>
+        </label>
+        {% else %}
+        <p style="color:var(--muted);font-size:0.875rem;">No courses available yet.</p>
+        {% endfor %}
+      </div>
+      <div class="modal-footer">
+        <button type="button"
+          onclick="document.getElementById('enrollStudentModal').classList.remove('open')"
+          class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Enrolment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  function filterByClass(cls) {
+    const rows = document.querySelectorAll('.data-table tbody tr');
+    let visible = 0;
+    rows.forEach(row => {
+      const streamCell = row.querySelector('td:nth-child(4)');
+      if (!streamCell) return;
+      // Only read the first div (stream name), not the "Yr X" sub-line
+      const firstDiv = streamCell.querySelector('div');
+      const streamText = firstDiv ? firstDiv.textContent.trim() : streamCell.textContent.trim();
+      const show = !cls || streamText === cls;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('studentCount').textContent = visible + ' registered';
+  }
+
+  function confirmDelete(studentId, studentName) {
+    document.getElementById('deleteStudentName').textContent = studentName;
+    document.getElementById('deleteStudentForm').action = `/students/delete/${studentId}`;
+    document.getElementById('deleteStudentModal').classList.add('open');
+  }
+
+  function toggleEnrollLabel(cb) {
+    const label = document.getElementById('enroll-label-' + cb.value);
+    label.classList.toggle('checked', cb.checked);
+  }
+
+  function openEnrollModal(studentId, studentName, enrolledIds) {
+    document.getElementById('enrollStudentName').textContent = studentName;
+    document.getElementById('enrollForm').action = `/students/${studentId}/enroll`;
+    document.querySelectorAll('.enroll-checkbox').forEach(cb => {
+      cb.checked = enrolledIds.includes(parseInt(cb.value));
+      const label = document.getElementById('enroll-label-' + cb.value);
+      label.classList.toggle('checked', cb.checked);
+    });
+    document.getElementById('enrollStudentModal').classList.add('open');
+  }
+
+  // Close modals when clicking the backdrop
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
+    });
+  });
+
+  function toggleDropdown(btn) {
+    const menu = btn.nextElementSibling;
+    const isOpen = menu.style.display === 'block';
+    // Close all open dropdowns first
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+    menu.style.display = isOpen ? 'none' : 'block';
+    // Close when clicking outside
+    if (!isOpen) {
+      setTimeout(() => {
+        document.addEventListener('click', function closeDropdown(e) {
+          if (!btn.parentElement.contains(e.target)) {
+            menu.style.display = 'none';
+            document.removeEventListener('click', closeDropdown);
+          }
+        });
+      }, 0);
+    }
+  }
+
+  function previewPhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Photo must be under 2 MB.');
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('photoImg').src = e.target.result;
+      document.getElementById('photoImg').style.display = 'block';
+      document.getElementById('photoPlaceholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updatePhotoPlaceholder() {
+    const firstName = document.querySelector('[name="first_name"]').value;
+    const surname   = document.querySelector('[name="surname"]').value;
+    const img = document.getElementById('photoImg');
+    if (img.style.display === 'none') {
+      const ph = document.getElementById('photoPlaceholder');
+      if (firstName || surname) {
+        ph.textContent = (firstName[0] || '') + (surname[0] || '');
+        ph.style.fontSize = '1rem';
+      } else {
+        ph.textContent = '📷';
+        ph.style.fontSize = '1.3rem';
+      }
+    }
+  }
+
+  function openPromoteModal(id, name, stream, year, status) {
+    document.getElementById('promoteTitle').textContent = name;
+    document.getElementById('promoteSubtitle').textContent = 'Currently: Year ' + year + ' | ' + status;
+    document.getElementById('promoteStream').value = stream;
+    document.getElementById('promoteForm').action = '/students/' + id + '/promote';
+    document.getElementById('promoteModal').style.display = 'flex';
+  }
+</script>
+
+<!-- Promote/Status Modal -->
+<div class="modal-overlay" id="promoteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border-radius:16px;padding:28px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <h3 style="font-family:'Fraunces',serif;font-size:1.2rem;margin:0 0 6px;" id="promoteTitle"></h3>
+    <p id="promoteSubtitle" style="color:var(--muted);font-size:0.85rem;margin:0 0 20px;"></p>
+    <form method="POST" id="promoteForm">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Class</label>
+        <select name="stream" id="promoteStream"
+          style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:0.875rem;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;">
+          <option value="">— Select Class —</option>
+          <option value="PP1">PP1</option>
+          <option value="PP2">PP2</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+        <button type="submit" name="action" value="promote" class="btn btn-secondary btn-sm" style="flex:1;">
+          ↑ Promote 1 Year
+        </button>
+        <button type="submit" name="action" value="graduate" class="btn btn-secondary btn-sm" style="flex:1;">
+          🎓 Graduate
+        </button>
+        <button type="submit" name="action" value="transfer" class="btn btn-secondary btn-sm" style="flex:1;">
+          ⇄ Transfer
+        </button>
+        <button type="submit" name="action" value="reactivate" class="btn btn-secondary btn-sm" style="flex:1;">
+          ✓ Reactivate
+        </button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('promoteModal').style.display='none'"
+          style="padding:9px 20px;background:transparent;color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}Teachers – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Brand & Typography */
+    .brand-headline h2 {
+      font-family: 'Fraunces', serif;
+      font-size: 3rem;
+      font-weight: 300;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .brand-headline h2 em { font-style: italic; color: var(--amber); }
+    .brand-headline p { color: rgba(255,255,255,0.7); font-size: 0.95rem; line-height: 1.6; }
+
+    /* Layout & Utilities */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--surface); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; background: #f0f4ff; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; margin: 4px 0; }
+    .stat-label { color: var(--text-muted); font-size: 0.85rem; }
+    .stat-sub { font-size: 0.75rem; color: #1e7a3c; }
+
+    .content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 2rem; }
+    .card-panel { background: var(--surface); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    
+    /* Table Styling */
+    .table-wrap { overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 0.85rem; }
+    td { padding: 12px; border-bottom: 1px solid var(--border); }
+    .avatar-cell { display: flex; align-items: center; gap: 12px; }
+    .avatar { width: 32px; height: 32px; background: var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; }
+    .teacher-name { font-weight: 600; font-size: 0.9rem; }
+    .teacher-id { font-size: 0.75rem; color: var(--text-muted); }
+    
+    /* Badges & Actions */
+    .badge-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+    .badge-active { background: #e8f4ee; color: #1e7a3c; }
+    .badge-leave { background: #fef3e2; color: #b85c00; }
+    .badge-inactive { background: var(--surface-2); color: #666; }
+    .actions { display: flex; gap: 8px; }
+    .btn-action { font-size: 0.75rem; text-decoration: none; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; background: none; }
+    .btn-edit { color: #2e5b8a; }
+    .btn-delete { color: #e8614a; }
+
+    /* Modal Styling */
+    .modal-backdrop { 
+        position: fixed; top:0; left:0; width:100%; height:100%; 
+        background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; 
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-content { background: var(--surface); padding: 2rem; border-radius: 12px; width: 100%; max-width: 500px; position: relative; }
+    
+    /* Form Styling inside Modal */
+    .form-group { margin-bottom: 1.2rem; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #444; }
+    .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+
+    /* Subject Tags & Legend */
+    .subject-tag { background: #f0f4ff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    .legend-item { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem; }
+    .legend-left { display: flex; align-items: center; gap: 8px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    @media (max-width: 1024px) {
+      .content-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .teacher-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .page-title { font-size: 1.5rem; }
+    }
+
+    /* ── Dark mode overrides ── */
+    body.dark-mode .stat-card,
+    body.dark-mode .card-panel,
+    body.dark-mode .modal-content { background: var(--surface); border-color: var(--border); box-shadow: none; }
+    body.dark-mode .stat-icon { background: #1A2238; }
+    body.dark-mode .stat-value { color: var(--text); }
+    body.dark-mode .stat-sub { color: #5ADE90; }
+    body.dark-mode table th { background: #161616; color: var(--muted); border-color: var(--border); }
+    body.dark-mode table td { border-color: var(--border); color: var(--text-2); }
+    body.dark-mode tr:hover td { background: #1E1E1E; }
+    body.dark-mode .teacher-name { color: var(--text); }
+    body.dark-mode .teacher-id { color: var(--muted); }
+    body.dark-mode .avatar { background: #2A2A2A; color: var(--text-2); }
+    body.dark-mode .badge-active { background: #0D2218; color: #5ADE90; }
+    body.dark-mode .badge-leave { background: #2A2010; color: #FBC050; }
+    body.dark-mode .badge-inactive { background: #222222; color: var(--muted); }
+    body.dark-mode .subject-tag { background: #101828; color: #70B8FA; }
+    body.dark-mode .btn-edit { color: #70B8FA; }
+    body.dark-mode .btn-delete { color: #FF9080; }
+    body.dark-mode .form-control { background: #222222; border-color: var(--border); color: var(--text); }
+    body.dark-mode .form-group label { color: var(--muted); }
+    body.dark-mode .legend-item { color: var(--text-2); }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Teachers</h1>
+        <p>Manage and view teacher records</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal()">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Teacher
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="stat-label">Total Teachers</div>
+        <div class="stat-value">{{ total }}</div>
+        <div class="stat-sub">+3 this term</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#e8f4ee;">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#1e7a3c" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="stat-label">Active</div>
+        <div class="stat-value">{{ active }}</div>
+        <div class="stat-sub">{{ ((active / total * 100) | round(1)) if total > 0 else 0 }}% active rate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fef3e2;">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#b85c00" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <div class="stat-label">Subjects</div>
+        <div class="stat-value">12</div>
+        <div class="stat-sub">across all depts.</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#e8eef4;">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2e5b8a" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        </div>
+        <div class="stat-label">On Leave</div>
+        <div class="stat-value">{{ on_leave }}</div>
+        <div class="stat-sub">returning soon</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="card-panel">
+        <div class="card-header">
+          <h3>All Teachers</h3>
+          <span style="font-size:0.78rem;color:var(--text-muted);">{{ total }} records</span>
+        </div>
+        
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Teacher</th>
+                <th>Subject</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for teacher in teachers %}
+              <tr>
+                <td>
+                  <div class="avatar-cell">
+                    <div class="avatar">{{ teacher.name[:2].upper() }}</div>
+                    <div>
+                      <div class="teacher-name">{{ teacher.name }}</div>
+                      <div class="teacher-id">ID #T-{{ '%03d' % teacher.id }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="subject-tag">{{ teacher.subject }}</span></td>
+                <td style="color:var(--text-muted);font-size:0.83rem;">{{ teacher.email }}</td>
+                <td>
+                  <span class="badge-pill {% if teacher.status == 'Active' %}badge-active{% elif teacher.status == 'On Leave' %}badge-leave{% else %}badge-inactive{% endif %}">
+                    {{ teacher.status }}
+                  </span>
+                </td>
+                <td>
+                  <div class="actions">
+                    <a href="{{ url_for('edit_teacher', id=teacher.id) }}" class="btn-action btn-edit">Edit</a>
+                    <form action="{{ url_for('delete_teacher', id=teacher.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure?');">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-action btn-delete">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" style="text-align:center;padding:40px;">No teachers yet.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="card-panel" style="margin-bottom:1.5rem;">
+          <h3>By Subject</h3>
+          <canvas id="teacherChart" height="200"></canvas>
+          <div class="subject-legend">
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:#4a8c62;"></div>Sciences</div><span>16</span></div>
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:#c4763a;"></div>Humanities</div><span>12</span></div>
+              <div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:#2e5b8a;"></div>Mathematics</div><span>10</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="addModal" class="modal-backdrop" onclick="handleBackdropClick(event)">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0;">Add New Teacher</h3>
+                <button onclick="closeModal()" style="background:none; border:none; cursor:pointer; font-size:1.5rem;">&times;</button>
+            </div>
+            
+            <form action="{{ url_for('add_teacher') }}" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="Enter teacher name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Main Subject</label>
+                    <input type="text" name="subject" class="form-control" placeholder="e.g. Mathematics" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="email@school.ac.ke" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status" class="form-control">
+                        <option value="Active">Active</option>
+                        <option value="On Leave">On Leave</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 2rem;">
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Teacher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Chart initialization
+  const ctx = document.getElementById('teacherChart');
+  if(ctx) {
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Sciences', 'Humanities', 'Mathematics', 'Languages'],
+          datasets: [{
+            data: [16, 12, 10, 10],
+            backgroundColor: ['#4a8c62cc','#c4763acc','#2e5b8acc','#2a7a7acc'],
+            borderWidth: 0,
+            borderRadius: 4
+          }]
+        },
+        options: { cutout: '70%', plugins: { legend: { display: false } } }
+      });
+  }
+
+  function openModal() { document.getElementById('addModal').classList.add('open'); }
+  function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+  function handleBackdropClick(e) { if (e.target.id === 'addModal') closeModal(); }
+</script>
+{% endblock %}

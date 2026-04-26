@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Disciplinary Records – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .page-title { font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 300; letter-spacing: -0.5px; }
+  .page-title em { font-style: italic; color: var(--coral); }
+
+  /* Stats row */
+  .disc-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .disc-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 22px;
+  }
+  .disc-stat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+  .disc-stat-val { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 600; line-height: 1; color: var(--text); margin-bottom: 4px; }
+  .disc-stat-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 600; }
+
+  /* Layout */
+  .disc-layout { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
+
+  /* Table card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .card-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; margin: 0; }
+
+  .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .filter-select {
+    padding: 7px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.8rem; color: var(--text);
+    background: var(--bg); outline: none;
+  }
+  .filter-select:focus { border-color: var(--coral); }
+
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th {
+    text-align: left; padding: 10px 20px; font-size: 0.66rem; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); font-weight: 600;
+    border-bottom: 1px solid var(--border); background: var(--bg); white-space: nowrap;
+  }
+  .data-table td { padding: 14px 20px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+
+  .student-cell { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--coral-bg); color: var(--coral); font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .student-name { font-weight: 600; font-size: 0.85rem; color: var(--text); }
+  .student-id   { font-size: 0.72rem; color: var(--muted); }
+
+  /* Severity badges */
+  .severity { font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .sev-low    { background: var(--sky); color: #1D4ED8; }
+  .sev-medium { background: var(--amber-bg); color: #92400e; }
+  .sev-high   { background: #FEE2E2; color: #B91C1C; }
+  .sev-critical { background: #1C1C1A; color: #fff; }
+
+  /* Status badges */
+  .status-badge { font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .status-open     { background: #FEF9C3; color: #854D0E; }
+  .status-resolved { background: #dcfce7; color: #15803D; }
+  .status-pending  { background: var(--amber-bg); color: #92400e; }
+
+  .incident-desc { font-size: 0.82rem; color: var(--text); margin-bottom: 4px; }
+  .incident-action { font-size: 0.75rem; color: var(--muted); font-style: italic; }
+
+  .row-actions { display: flex; gap: 6px; }
+  .btn-icon { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.12s; }
+  .btn-icon:hover { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-mid); }
+
+  /* Add incident form */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; position: sticky; top: 20px; }
+  .form-card-head { padding: 18px 22px; border-bottom: 1px solid var(--border); }
+  .form-card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; }
+  .form-body { padding: 20px 22px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text); display: block; margin-bottom: 5px; }
+  .form-control {
+    width: 100%; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.85rem; color: var(--text);
+    background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .form-control:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(232,97,74,0.08); }
+  textarea.form-control { resize: vertical; }
+
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: var(--radius-sm); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s, transform 0.1s; }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-primary { background: var(--coral); color: #fff; width: 100%; justify-content: center; }
+
+  /* Student history panel */
+  .history-bar { background: var(--coral-bg); border: 1px solid var(--coral-mid); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 0.8rem; color: #8B3626; }
+
+  @media (max-width: 1024px) { .disc-layout { grid-template-columns: 1fr; } .form-card { position: static; } }
+  @media (max-width: 768px) { .disc-stats { grid-template-columns: 1fr 1fr; } .card-head { flex-direction: column; align-items: flex-start; } }
+  @media (max-width: 480px) { .disc-stats { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title">Disciplinary <em>Records</em></h1>
+    <p class="page-subtitle">Incident tracking and action management</p>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="disc-stats">
+  <div class="disc-stat">
+    <div class="disc-stat-icon" style="background:#FEE2E2;">
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="#B91C1C" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="disc-stat-val">{{ total_incidents }}</div>
+    <div class="disc-stat-lbl">Total Incidents</div>
+  </div>
+  <div class="disc-stat">
+    <div class="disc-stat-icon" style="background:#FEF9C3;">
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="#854D0E" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="disc-stat-val">{{ open_incidents }}</div>
+    <div class="disc-stat-lbl">Open / Pending</div>
+  </div>
+  <div class="disc-stat">
+    <div class="disc-stat-icon" style="background:#dcfce7;">
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="#15803D" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="disc-stat-val">{{ resolved_incidents }}</div>
+    <div class="disc-stat-lbl">Resolved</div>
+  </div>
+  <div class="disc-stat">
+    <div class="disc-stat-icon" style="background:#f3f4f6;">
+      <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="var(--text)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    </div>
+    <div class="disc-stat-val">{{ unique_students }}</div>
+    <div class="disc-stat-lbl">Students Involved</div>
+  </div>
+</div>
+
+<div class="disc-layout">
+  <!-- Records table -->
+  <div class="card">
+    <div class="card-head">
+      <h3>Incident Log</h3>
+      <div class="filter-row">
+        <form method="GET" action="{{ url_for('disciplinary_page') }}" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="filter-select" name="severity" onchange="this.form.submit()">
+            <option value="">All Severities</option>
+            <option value="low" {% if request.args.get('severity')=='low' %}selected{% endif %}>Low</option>
+            <option value="medium" {% if request.args.get('severity')=='medium' %}selected{% endif %}>Medium</option>
+            <option value="high" {% if request.args.get('severity')=='high' %}selected{% endif %}>High</option>
+            <option value="critical" {% if request.args.get('severity')=='critical' %}selected{% endif %}>Critical</option>
+          </select>
+          <select class="filter-select" name="status" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="open" {% if request.args.get('status')=='open' %}selected{% endif %}>Open</option>
+            <option value="pending" {% if request.args.get('status')=='pending' %}selected{% endif %}>Pending</option>
+            <option value="resolved" {% if request.args.get('status')=='resolved' %}selected{% endif %}>Resolved</option>
+          </select>
+        </form>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Date</th>
+            <th>Incident</th>
+            <th>Severity</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in records %}
+          <tr>
+            <td>
+              <div class="student-cell">
+                <div class="avatar">{{ rec.student.first_name[0] }}{{ rec.student.surname[0] }}</div>
+                <div>
+                  <div class="student-name">{{ rec.student.first_name }} {{ rec.student.surname }}</div>
+                  <div class="student-id">{{ rec.student.id_number }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:0.82rem;color:var(--muted);white-space:nowrap;">{{ rec.incident_date }}</td>
+            <td style="max-width:260px;">
+              <div class="incident-desc">{{ rec.description }}</div>
+              {% if rec.action_taken %}
+              <div class="incident-action">Action: {{ rec.action_taken }}</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="severity sev-{{ rec.severity }}">{{ rec.severity }}</span>
+            </td>
+            <td>
+              <span class="status-badge status-{{ rec.status }}">{{ rec.status }}</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <a href="{{ url_for('edit_disciplinary', id=rec.id) }}" class="btn-icon" title="Edit">
+                  <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </a>
+                <form method="POST" action="{{ url_for('delete_disciplinary', id=rec.id) }}" onsubmit="return confirm('Delete this record?')" style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn-icon" title="Delete">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="text-align:center;padding:60px 20px;color:var(--muted);font-size:0.85rem;">No disciplinary records found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add incident -->
+  <div class="form-card">
+    <div class="form-card-head">
+      <h3>Log <em style="font-style:italic;color:var(--coral);">Incident</em></h3>
+    </div>
+    <div class="form-body">
+      <form method="POST" action="{{ url_for('add_disciplinary') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label class="form-label">Student</label>
+          <select class="form-control" name="student_id" required>
+            <option value="">— Select student —</option>
+            {% for s in students %}
+            <option value="{{ s.id }}">{{ s.first_name }} {{ s.surname }} ({{ s.id_number }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date of Incident</label>
+          <input class="form-control" type="date" name="incident_date" value="{{ today }}" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity</label>
+          <select class="form-control" name="severity" required>
+            <option value="low">Low — minor infraction</option>
+            <option value="medium" selected>Medium — moderate issue</option>
+            <option value="high">High — serious misconduct</option>
+            <option value="critical">Critical — requires escalation</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-control" name="description" rows="3" placeholder="Describe the incident..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Action Taken <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+          <textarea class="form-control" name="action_taken" rows="2" placeholder="e.g. Verbal warning, parent called..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-control" name="status">
+            <option value="open">Open</option>
+            <option value="pending">Pending follow-up</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Record</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

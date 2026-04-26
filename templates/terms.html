@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Terms & Semesters – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .page-title { font-family: 'Fraunces', serif; font-size: 2.2rem; font-weight: 300; letter-spacing: -0.5px; }
+  .page-title em { font-style: italic; color: var(--coral); }
+
+  /* Active term banner */
+  .active-banner {
+    background: linear-gradient(135deg, #1C1C1A 0%, #2d2d2a 100%);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; color: #fff; gap: 20px; flex-wrap: wrap;
+  }
+  .active-banner-label {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.5); margin-bottom: 6px; font-weight: 600;
+  }
+  .active-banner-name {
+    font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 300;
+    color: #fff; margin-bottom: 4px;
+  }
+  .active-banner-dates { font-size: 0.82rem; color: rgba(255,255,255,0.55); }
+  .active-pill {
+    background: #22c55e; color: #fff; font-size: 0.72rem;
+    font-weight: 700; padding: 4px 12px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .progress-bar-wrap { flex: 1; min-width: 200px; max-width: 320px; }
+  .progress-label { font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .progress-track { background: rgba(255,255,255,0.12); border-radius: 100px; height: 6px; }
+  .progress-fill  { background: var(--coral); border-radius: 100px; height: 6px; transition: width 0.6s ease; }
+
+  /* Term grid */
+  .term-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .term-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px; position: relative;
+    transition: box-shadow 0.18s;
+  }
+  .term-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+  .term-card.is-active { border-color: var(--coral-mid); }
+  .term-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .term-year { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+  .term-name { font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 600; color: var(--text); margin-top: 2px; }
+  .badge-active   { background: #dcfce7; color: #15803D; border: 1px solid #86efac; font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-upcoming { background: var(--amber-bg); color: #92400e; border: 1px solid var(--amber-mid); font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .badge-past     { background: var(--bg); color: var(--muted); border: 1px solid var(--border); font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .term-dates { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .term-dates span { display: flex; align-items: center; gap: 4px; }
+  .term-stats { display: flex; gap: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .term-stat { text-align: center; flex: 1; }
+  .term-stat-val { font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 600; color: var(--text); display: block; }
+  .term-stat-lbl { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+  .term-actions { display: flex; gap: 6px; margin-top: 14px; }
+
+  /* Form card */
+  .form-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 32px; margin-bottom: 28px; }
+  .form-section h3 { font-family: 'Fraunces', serif; font-size: 1.2rem; margin-bottom: 20px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 0.75rem; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.8px; }
+  .form-control {
+    padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.875rem; color: var(--text);
+    background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .form-control:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(232,97,74,0.08); }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+  /* Btn */
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: var(--radius-sm); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.84rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; transition: opacity 0.15s, transform 0.1s; }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-primary { background: var(--coral); color: #fff; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+  .btn-danger-soft { background: #FEE2E2; color: #B91C1C; }
+  .btn-success-soft { background: #dcfce7; color: #15803D; }
+
+  @media (max-width: 768px) {
+    .active-banner { flex-direction: column; }
+    .form-row { grid-template-columns: 1fr; }
+    .term-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;">
+  <div>
+    <h1 class="page-title">Terms & <em>Semesters</em></h1>
+    <p class="page-subtitle">Manage academic periods and archive data by term</p>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('newTermForm').scrollIntoView({behavior:'smooth'})">
+    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Term
+  </button>
+</div>
+
+{% if active_term %}
+<div class="active-banner">
+  <div>
+    <div class="active-banner-label">Current Active Term</div>
+    <div class="active-banner-name">{{ active_term.name }}</div>
+    <div class="active-banner-dates">{{ active_term.start_date }} → {{ active_term.end_date }}</div>
+  </div>
+  <span class="active-pill">● Live</span>
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Term Progress</span>
+      <span>{{ active_term.progress_pct }}%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" style="width: {{ active_term.progress_pct }}%;"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Term Cards -->
+<div class="term-grid">
+  {% for term in terms %}
+  <div class="term-card {% if term.is_active %}is-active{% endif %}">
+    <div class="term-card-top">
+      <div>
+        <div class="term-year">{{ term.academic_year }}</div>
+        <div class="term-name">{{ term.name }}</div>
+      </div>
+      {% if term.is_active %}
+        <span class="badge-active">Active</span>
+      {% elif term.start_date > today %}
+        <span class="badge-upcoming">Upcoming</span>
+      {% else %}
+        <span class="badge-past">Archived</span>
+      {% endif %}
+    </div>
+
+    <div class="term-dates">
+      <span>
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        {{ term.start_date }}
+      </span>
+      <span>→ {{ term.end_date }}</span>
+    </div>
+
+    <div class="term-stats">
+      <div class="term-stat">
+        <span class="term-stat-val">{{ term.student_count }}</span>
+        <span class="term-stat-lbl">Students</span>
+      </div>
+      <div class="term-stat">
+        <span class="term-stat-val">{{ term.exam_count }}</span>
+        <span class="term-stat-lbl">Exams</span>
+      </div>
+      <div class="term-stat">
+        <span class="term-stat-val">{{ term.attendance_days }}</span>
+        <span class="term-stat-lbl">Days logged</span>
+      </div>
+    </div>
+
+    <div class="term-actions">
+      {% if not term.is_active %}
+      <form method="POST" action="{{ url_for('set_active_term', id=term.id) }}" style="margin:0;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-success-soft">Set Active</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('term_report', id=term.id) }}" class="btn btn-sm btn-secondary">View Report</a>
+      {% if not term.is_active %}
+      <form method="POST" action="{{ url_for('delete_term', id=term.id) }}" onsubmit="return confirm('Delete this term and its data?')" style="margin:0;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-danger-soft">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column: 1/-1; text-align:center; padding: 60px 24px; color: var(--muted);">
+    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" style="display:block;margin:0 auto 12px;opacity:0.3;"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    No terms created yet. Add your first term below.
+  </div>
+  {% endfor %}
+</div>
+
+<!-- New Term Form -->
+<div class="form-section" id="newTermForm">
+  <h3>Create New <em style="font-style:italic;color:var(--coral);">Term</em></h3>
+  <form method="POST" action="{{ url_for('create_term') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Term Name</label>
+        <input class="form-control" name="name" placeholder="e.g. Term 1, Semester A" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Academic Year</label>
+        <input class="form-control" name="academic_year" placeholder="e.g. 2024 / 2025" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input class="form-control" type="date" name="start_date" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Date</label>
+        <input class="form-control" type="date" name="end_date" required>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save Term</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Exams – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 22px 22px 18px; position: relative; overflow: hidden; }
+  .stat-pill { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 14px; }
+  .stat-pill svg { width: 20px; height: 20px; }
+  .stat-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; }
+  .stat-value { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 600; color: var(--text); line-height: 1; }
+  .stat-value.amber { color: var(--amber); }
+  .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+  .stat-accent-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; border-radius: 0 0 var(--radius) var(--radius); }
+
+  /* ── Card sub-components ── */
+  .card-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; }
+  .card-head-sub { font-size: 0.78rem; color: var(--muted); }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { padding: 10px 22px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .data-table td { padding: 12px 22px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+  .data-table th:last-child, .data-table td:last-child { text-align: right; }
+
+  /* ── Missing badges ── */
+  .badge-coral  { background: var(--coral-bg); color: #C04A35; }
+  .badge-purple { background: #F3E8FF; color: #7E22CE; }
+
+  /* ── Action cell ── */
+  .action-cell { display: flex; gap: 6px; justify-content: flex-end; }
+
+
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Exams<em>.</em></h1>
+    <p class="page-subtitle">Schedule exams and record student results</p>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('examModal').classList.add('open')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Schedule Exam
+  </button>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-pill" style="background:var(--amber-bg);">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#B87A10" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+    </div>
+    <div class="stat-label">Total Exams</div>
+    <div class="stat-value">{{ exams | length }}</div>
+    <div class="stat-accent-bar" style="background:var(--amber);"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-pill" style="background:var(--sky);">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="stat-label">Courses Covered</div>
+    <div class="stat-value">{{ exams | map(attribute='course_id') | list | unique | list | length }}</div>
+    <div class="stat-accent-bar" style="background:#2563EB;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-pill" style="background:var(--green);">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#15803D" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </div>
+    <div class="stat-label">Results Entered</div>
+    {% set ns = namespace(total=0) %}{% for e in exams %}{% set ns.total = ns.total + (e.results|length) %}{% endfor %}
+    <div class="stat-value">{{ ns.total }}</div>
+    <div class="stat-accent-bar" style="background:#15803D;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-pill" style="background:#F3E8FF;">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#7E22CE" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+    </div>
+    <div class="stat-label">Pending Marks</div>
+    {% set pending = exams | selectattr('results') | list | length %}
+    <div class="stat-value amber">{{ exams | length - pending }}</div>
+    <div class="stat-accent-bar" style="background:#7E22CE;"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h3>All Exams</h3>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <select id="filterTerm" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.83rem;background:var(--surface);color:var(--text);cursor:pointer;">
+        <option value="">All Terms</option>
+        <option value="Term 1">Term 1</option>
+        <option value="Term 2">Term 2</option>
+        <option value="Term 3">Term 3</option>
+      </select>
+      <select id="filterType" style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.83rem;background:var(--surface);color:var(--text);cursor:pointer;">
+        <option value="">All Types</option>
+        <option value="Mid-Term">Mid-Term</option>
+        <option value="End-Term">End-Term</option>
+        <option value="CAT">CAT</option>
+        <option value="Mock">Mock</option>
+      </select>
+      <button onclick="applyFilters()" class="btn btn-primary btn-sm">Apply</button>
+      <button onclick="resetFilters()" class="btn btn-secondary btn-sm">Reset</button>
+      <span id="filterCount" style="font-size:0.78rem;color:var(--muted);">{{ exams | length }} total</span>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Exam Title</th><th>Course</th><th>Term</th><th>Type</th><th>Date</th>
+          <th>Marks</th><th>Results</th><th>Avg Score</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for exam in exams %}
+        {% set result_count = exam.results | length %}
+        {% set avg = (exam.results | sum(attribute='marks') / result_count) if result_count > 0 else None %}
+        <tr data-term="{{ exam.term or 'Term 1' }}" data-type="{{ exam.exam_type }}">
+          <td style="font-weight:500;">{{ exam.title }}</td>
+          <td style="color:var(--muted);font-size:0.83rem;">{{ exam.course.title }}</td>
+          <td><span class="badge badge-blue" style="font-size:0.72rem;">{{ exam.term or 'Term 1' }}</span></td>
+          <td>
+            {% if exam.exam_type == 'End-Term' %}<span class="badge badge-purple">{{ exam.exam_type }}</span>
+            {% elif exam.exam_type == 'Mid-Term' %}<span class="badge badge-amber">{{ exam.exam_type }}</span>
+            {% elif exam.exam_type == 'Mock' %}<span class="badge badge-blue">{{ exam.exam_type }}</span>
+            {% else %}<span class="badge badge-green">{{ exam.exam_type }}</span>{% endif %}
+          </td>
+          <td>{{ exam.exam_date.strftime('%d %b %Y') }}</td>
+          <td>{{ exam.total_marks }}</td>
+          <td>
+            <span style="font-weight:500;">{{ result_count }}</span>
+            <span style="color:var(--muted);font-size:0.8rem;"> / {{ exam.course.students | length }}</span>
+          </td>
+          <td>
+            {% if avg is not none %}
+              <span class="badge {% if avg >= 70 %}badge-green{% elif avg >= 50 %}badge-amber{% else %}badge-coral{% endif %}">
+                {{ "%.1f"|format(avg) }}%
+              </span>
+            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+          </td>
+          <td>
+            <div class="action-cell">
+              <a href="{{ url_for('exam_results', exam_id=exam.id) }}" class="btn btn-secondary btn-sm">Enter Marks</a>
+              <form method="POST" action="{{ url_for('delete_exam', id=exam.id) }}" onsubmit="return confirm('Delete this exam?')">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger btn-sm">✕</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      {% if not exams %}
+        <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">No exams scheduled yet.</td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal-overlay" id="examModal">
+  <div class="modal-box">
+    <div class="modal-title">Schedule Exam</div>
+    <form method="POST" action="{{ url_for('add_exam') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">Exam Title</label>
+        <input name="title" class="form-control" placeholder="e.g. Mathematics 101 – End-Term" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Course</label>
+        <select name="course_id" class="form-control" required>
+          <option value="">Select course…</option>
+          {% for c in courses %}<option value="{{ c.id }}">{{ c.title }}</option>{% endfor %}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Exam Type</label>
+          <select name="exam_type" class="form-control">
+            <option>Mid-Term</option><option>End-Term</option><option>CAT</option><option>Mock</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Marks</label>
+          <input name="total_marks" type="number" class="form-control" value="100" min="1">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Term</label>
+          <select name="term" class="form-control">
+            <option value="Term 1">Term 1</option>
+            <option value="Term 2">Term 2</option>
+            <option value="Term 3">Term 3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Exam Date</label>
+          <input name="exam_date" type="date" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="document.getElementById('examModal').classList.remove('open')" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Schedule</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+function resetFilters() {
+  document.getElementById('filterTerm').value = '';
+  document.getElementById('filterType').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const term = document.getElementById('filterTerm').value;
+  const type = document.getElementById('filterType').value;
+  const rows = document.querySelectorAll('tbody tr[data-term]');
+  let visible = 0;
+  rows.forEach(function(row) {
+    const termMatch = !term || row.getAttribute('data-term') === term;
+    const typeMatch = !type || row.getAttribute('data-type') === type;
+    const show = termMatch && typeMatch;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  const countEl = document.getElementById('filterCount');
+  if (countEl) countEl.textContent = visible + ' total';
+}
+</script>
+{% endblock %}
+{% endblock %}

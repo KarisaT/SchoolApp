@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Edit Course – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Typography & Header */
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    /* Centered Layout Container */
+    .edit-container { max-width: 800px; margin: 0 auto; padding-bottom: 4rem; }
+    
+    .card-panel { 
+        background: white; 
+        border-radius: 16px; 
+        padding: 2.5rem; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04); 
+        border: 1px solid #f0f0f0;
+    }
+
+    .card-header-custom {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .card-header-custom h3 { margin: 0; font-size: 1.3rem; color: var(--text-dark); }
+    .card-header-custom p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Form Grid */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    .full-width { grid-column: span 2; }
+
+    .form-label { 
+        display: block; 
+        font-size: 0.82rem; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        letter-spacing: 0.03em;
+        color: var(--text-muted); 
+        margin-bottom: 8px; 
+    }
+    .field-input, .form-select { 
+        width: 100%; 
+        padding: 12px 14px; 
+        border: 1px solid #e2e8f0; 
+        border-radius: 10px; 
+        font-size: 0.95rem; 
+        transition: 0.2s;
+        background-color: #fafafa;
+    }
+    .field-input:focus, .form-select:focus { 
+        background-color: #fff;
+        border-color: var(--accent); 
+        outline: none; 
+        box-shadow: 0 0 0 4px rgba(46, 91, 138, 0.08); 
+    }
+
+    /* Bottom Actions */
+    .form-actions { 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 12px; 
+        margin-top: 2rem; 
+        padding-top: 2rem;
+        border-top: 1px solid #f5f5f5;
+    }
+    .btn-cancel { 
+        padding: 12px 24px; 
+        color: #64748b; 
+        text-decoration: none; 
+        font-weight: 600; 
+        font-size: 0.9rem; 
+        display: flex;
+        align-items: center;
+    }
+
+    @media (max-width: 600px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .full-width { grid-column: span 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
+        <a href="{{ url_for('courses_page') }}" style="text-decoration:none; color:var(--text-muted); font-size:0.9rem;">← Back to Courses</a>
+        <h1 class="page-title">Edit <em>Course</em></h1>
+    </div>
+
+    <div class="card-panel">
+        <div class="card-header-custom">
+            <h3>Course Curriculum Details</h3>
+            <p>Update academic parameters for <strong>{{ course.title }}</strong></p>
+        </div>
+
+        <form method="POST" action="{{ url_for('edit_course', id=course.id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label" for="name">Course Title *</label>
+                    <input type="text" id="name" name="name" class="field-input" value="{{ course.title }}" required>
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label" for="teacher_name">Assigned Teacher</label>
+                    <input type="text" id="teacher_name" name="teacher_name" class="field-input" value="{{ course.teacher_name or '' }}" placeholder="Search or type teacher name...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="duration">Duration (mins) *</label>
+                    <input type="number" id="duration" name="duration" class="field-input" value="{{ course.duration }}" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="session_type">Session Type *</label>
+                    <select id="session_type" name="session_type" class="form-select">
+                        <option value="session" {% if course.session_type == 'session' %}selected{% endif %}>Regular Session</option>
+                        <option value="lecture" {% if course.session_type == 'lecture' %}selected{% endif %}>Lecture</option>
+                        <option value="lab" {% if course.session_type == 'lab' %}selected{% endif %}>Laboratory</option>
+                        <option value="tutorial" {% if course.session_type == 'tutorial' %}selected{% endif %}>Tutorial</option>
+                        <option value="seminar" {% if course.session_type == 'seminar' %}selected{% endif %}>Seminar</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('courses_page') }}" class="btn-cancel">Discard</a>
+                <button type="submit" class="btn-primary-custom" style="padding: 12px 30px;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="margin-right:8px; vertical-align:middle;">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    </svg>
+                    Update Course
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

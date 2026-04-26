@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+    /* MAIN */
+    
+    .page-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 32px;
+    }
+    .page-title {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem; font-weight: 300;
+      letter-spacing: -0.5px; color: var(--text);
+    }
+    .page-title em { font-style: italic; color: var(--coral); }
+    .page-date {
+      font-size: 0.8rem; color: var(--muted); margin-top: 4px;
+    }
+    .badge-today {
+      background: var(--amber-bg); color: #8A5E14;
+      border: 1px solid var(--amber-mid);
+      border-radius: 20px; padding: 6px 14px;
+      font-size: 0.78rem; font-weight: 600;
+    }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 22px 22px 18px;
+      border: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .stat-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px; border-radius: 12px;
+      margin-bottom: 14px;
+    }
+    .stat-pill svg { width: 20px; height: 20px; }
+    .stat-label {
+      font-size: 0.72rem; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted); font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: 'Fraunces', serif;
+      font-size: 2.2rem; font-weight: 600;
+      letter-spacing: -1px; line-height: 1;
+      color: var(--text);
+    }
+    .stat-sub {
+      font-size: 0.75rem; color: var(--muted); margin-top: 6px;
+    }
+    .stat-accent-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 3px; border-radius: 0 0 var(--radius) var(--radius);
+    }
+
+    /* GRID */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-head h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.05rem; font-weight: 600; color: var(--text);
+    }
+    .card-head-sub { font-size: 0.78rem; color: var(--muted); }
+    .card-head a {
+      font-size: 0.78rem; color: var(--coral);
+      text-decoration: none; font-weight: 600;
+    }
+    .card-body { padding: 20px 22px; }
+
+    /* FEE PROGRESS */
+    .fee-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.875rem; }
+    .fee-row strong { color: var(--coral); font-weight: 600; }
+    .progress-track {
+      background: var(--bg); border-radius: 20px; height: 8px; overflow: hidden; margin-bottom: 8px;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, var(--coral), var(--amber));
+      height: 100%; border-radius: 20px;
+    }
+    .fee-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
+
+    /* ATTENDANCE PILL */
+    .attendance-row {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem; color: var(--muted);
+    }
+    .att-badge {
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600;
+    }
+    .att-good { background: var(--mint); color: #3B6D11; }
+    .att-ok { background: var(--amber-bg); color: #8A5E14; }
+
+    /* TABLE */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .data-table th {
+      padding: 10px 22px; text-align: left;
+      font-size: 0.68rem; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted); font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td { padding: 12px 22px; border-bottom: 1px solid var(--border); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .rank-num { color: var(--muted); font-size: 0.8rem; }
+    .score-badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+    }
+    .score-hi { background: var(--mint); color: #3B6D11; }
+    .score-mid { background: var(--amber-bg); color: #8A5E14; }
+    .score-lo { background: var(--coral-bg); color: #C04A35; }
+
+    /* NOTICES */
+    .notice-item {
+      padding: 14px 22px; border-bottom: 1px solid var(--border);
+    }
+    .notice-item:last-child { border-bottom: none; }
+    .notice-title { font-size: 0.875rem; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .notice-meta { font-size: 0.75rem; color: var(--muted); }
+    .notice-pin { color: var(--amber); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* CHART CANVAS */
+    canvas { max-height: 220px; }
+
+    @media (max-width: 1024px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 12px; }
+      .page-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+      .page-title { font-size: 1.5rem; }
+      canvas { max-height: 160px; }
+    }
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+    }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+      <div>
+        <h1 class="page-title">Good morning, <em>Admin</em></h1>
+        <p class="page-date">Here's what's happening at your school today.</p>
+      </div>
+      <span class="badge-today">Live Dashboard</span>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-pill" style="background:var(--coral-bg);">
+          <svg fill="none" viewBox="0 0 24 24" stroke="#E8614A" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-label">Students</div>
+        <div class="stat-value">{{ student_count }}</div>
+        <div class="stat-sub">enrolled total</div>
+        <div class="stat-accent-bar" style="background:var(--coral);"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-pill" style="background:var(--sky);">
+          <svg fill="none" viewBox="0 0 24 24" stroke="#185FA5" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        </div>
+        <div class="stat-label">Teachers</div>
+        <div class="stat-value">{{ teacher_count }}</div>
+        <div class="stat-sub">across all depts.</div>
+        <div class="stat-accent-bar" style="background:#378ADD;"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-pill" style="background:var(--mint);">
+          <svg fill="none" viewBox="0 0 24 24" stroke="#3B6D11" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <div class="stat-label">Courses</div>
+        <div class="stat-value">{{ course_count }}</div>
+        <div class="stat-sub">active this term</div>
+        <div class="stat-accent-bar" style="background:#639922;"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-pill" style="background:var(--amber-bg);">
+          <svg fill="none" viewBox="0 0 24 24" stroke="#BA7517" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="stat-label">Attendance Logs</div>
+        <div class="stat-value">{{ attendance_count }}</div>
+        <div class="stat-sub">total recorded</div>
+        <div class="stat-accent-bar" style="background:var(--amber);"></div>
+      </div>
+    </div>
+
+    <!-- ROW 2: Charts -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <h3>Attendance Overview</h3>
+          <span class="card-head-sub">Present vs Absent</span>
+        </div>
+        <div class="card-body"><canvas id="attendanceChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Course Enrollment</h3>
+          <span class="card-head-sub">By subject</span>
+        </div>
+        <div class="card-body"><canvas id="courseChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ROW 3: Students + Fee + Notices -->
+    <div class="grid-3">
+      <!-- Top Students -->
+      <div class="card">
+        <div class="card-head">
+          <h3>Top Students</h3>
+          <span class="card-head-sub">By exam average</span>
+        </div>
+        {% if top_students %}
+        <table class="data-table">
+          <thead><tr>
+            <th>#</th><th>Student</th><th>Score</th>
+          </tr></thead>
+          <tbody>
+          {% for student, avg in top_students %}
+          <tr>
+            <td class="rank-num">{{ loop.index }}</td>
+            <td style="font-weight:500;">{{ student.name }}</td>
+            <td>
+              <span class="score-badge {% if avg >= 70 %}score-hi{% elif avg >= 50 %}score-mid{% else %}score-lo{% endif %}">
+                {{ avg }}%
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="card-body" style="color:var(--muted);font-size:0.875rem;">No exam results yet.</div>
+        {% endif %}
+      </div>
+
+      <!-- Fee + Notices stacked -->
+      <div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-head">
+            <h3>Fee Collection</h3>
+            <span class="card-head-sub">This term</span>
+          </div>
+          <div class="card-body">
+            <div class="fee-row">
+              <span style="color:var(--muted);">Collected</span>
+              <strong>KES {{ "{:,.0f}".format(total_collected) }}</strong>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:{{ fee_rate }}%;"></div>
+            </div>
+            <div class="fee-meta">
+              <span>{{ fee_rate }}% collected</span>
+              <span>Target: KES {{ "{:,.0f}".format(total_expected) }}</span>
+            </div>
+            <div class="attendance-row">
+              <span>Today's attendance:</span>
+              <strong>{{ today_present }}/{{ today_total }}</strong>
+              {% if today_total > 0 %}
+              <span class="att-badge {% if today_rate >= 80 %}att-good{% else %}att-ok{% endif %}">{{ today_rate }}%</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Notices</h3>
+            <a href="{{ url_for('announcements_page') }}">View all &rarr;</a>
+          </div>
+          {% if announcements %}
+            {% for a in announcements %}
+            <div class="notice-item">
+              {% if a.pinned %}<div class="notice-pin">Pinned</div>{% endif %}
+              <div class="notice-title">{{ a.title }}</div>
+              <div class="notice-meta">{{ a.created_at.strftime('%d %b %Y') }} &middot; {{ a.author }}</div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="card-body" style="color:var(--muted);font-size:0.875rem;">No notices posted.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 4: Exam avg chart -->
+    <div class="card">
+      <div class="card-head">
+        <h3>Average Exam Score by Course</h3>
+        <span class="card-head-sub">All exams</span>
+      </div>
+      <div class="card-body"><canvas id="examAvgChart" style="max-height:180px;"></canvas></div>
+    </div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const sharedFont = { family: 'Plus Jakarta Sans', size: 12 };
+  const sharedGrid = { color: 'rgba(0,0,0,0.05)' };
+  const tickColor = '#7A7972';
+  const sharedScales = {
+    x: { grid: { display: false }, ticks: { font: sharedFont, color: tickColor } },
+    y: { grid: sharedGrid, ticks: { font: sharedFont, color: tickColor }, beginAtZero: true }
+  };
+  const sharedOpts = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: sharedScales
+  };
+
+  new Chart(document.getElementById('attendanceChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Present', 'Absent'],
+      datasets: [{
+        data: [{{ present_count }}, {{ absent_count }}],
+        backgroundColor: ['rgba(232,97,74,0.15)', 'rgba(240,168,50,0.15)'],
+        borderColor: ['#E8614A', '#F0A832'],
+        borderWidth: 2,
+        borderRadius: 8,
+      }]
+    },
+    options: sharedOpts
+  });
+
+  const courseLabels = {{ course_labels | tojson | safe }};
+  const courseEnrollments = {{ course_enrollments | tojson | safe }};
+  const palette = ['#E8614A','#F0A832','#378ADD','#639922','#D4537E','#1D9E75'];
+
+  new Chart(document.getElementById('courseChart'), {
+    type: 'bar',
+    data: {
+      labels: courseLabels.length ? courseLabels : ['No courses yet'],
+      datasets: [{
+        data: courseEnrollments.length ? courseEnrollments : [0],
+        backgroundColor: palette.map(c => c + '22'),
+        borderColor: palette,
+        borderWidth: 2,
+        borderRadius: 8,
+      }]
+    },
+    options: sharedOpts
+  });
+
+  const examCtx = document.getElementById('examAvgChart');
+  if (examCtx) {
+    new Chart(examCtx, {
+      type: 'line',
+      data: {
+        labels: {{ course_labels | tojson }},
+        datasets: [{
+          data: {{ exam_avgs | tojson }},
+          borderColor: '#E8614A',
+          backgroundColor: 'rgba(232,97,74,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: '#E8614A',
+          pointRadius: 5,
+          tension: 0.35,
+          fill: true,
+        }]
+      },
+      options: {
+        ...sharedOpts,
+        scales: {
+          y: { beginAtZero: true, max: 100, grid: sharedGrid, ticks: { font: sharedFont, color: tickColor } },
+          x: { grid: { display: false }, ticks: { font: sharedFont, color: tickColor } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

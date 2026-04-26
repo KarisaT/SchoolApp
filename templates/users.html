@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}User Accounts – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .card-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { padding: 10px 18px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .data-table td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+  .role-admin   { background:#fdecea; color:#c0392b; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+  .role-teacher { background:#e8f0fe; color:#1a56db; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+  .role-bursar  { background:#e8f4ee; color:#1e7a3c; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border-radius:16px; padding:28px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+  .modal h3 { font-family:'Fraunces',serif; font-size:1.2rem; margin:0 0 20px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .form-group label { font-size:0.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .form-group input, .form-group select { padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.875rem; background:var(--bg); color:var(--text); outline:none; }
+  .form-group input:focus, .form-group select:focus { border-color:var(--coral); box-shadow:0 0 0 4px rgba(232,97,74,0.1); }
+  .btn-primary { padding:9px 20px; background:var(--coral); color:#fff; border:none; border-radius:var(--radius-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.875rem; font-weight:600; cursor:pointer; }
+  .btn-ghost   { padding:9px 20px; background:transparent; color:var(--text); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.875rem; cursor:pointer; }
+  .btn-sm      { padding:5px 12px; font-size:0.78rem; border-radius:6px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; border:1.5px solid var(--border); background:var(--surface); color:var(--text); }
+  .btn-sm:hover { background:var(--bg); }
+  .btn-danger  { border-color:#fca5a5; color:#c0392b; }
+  .btn-danger:hover { background:#fdecea; }
+  .info-box { background:var(--bg); border:1.5px solid var(--border); border-radius:10px; padding:14px 18px; margin-bottom:24px; font-size:0.875rem; color:var(--muted); }
+  .info-box strong { color:var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title">User <em>Accounts</em></h1>
+    <p class="page-subtitle">Manage logins and roles for staff members.</p>
+  </div>
+  <button class="btn-primary" onclick="document.getElementById('addUserModal').classList.add('open')">+ Add User</button>
+</div>
+
+<div class="info-box">
+  <strong>Roles:</strong>
+  &nbsp;<span class="role-admin">Admin</span> — full access &nbsp;|&nbsp;
+  <span class="role-teacher">Teacher</span> — academics, attendance, exams &nbsp;|&nbsp;
+  <span class="role-bursar">Bursar</span> — finance only
+</div>
+
+<div class="card">
+  <div class="card-head"><h3>All Users</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Username</th><th>Role</th><th>Linked Teacher</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td style="font-weight:600;">{{ u.username }}</td>
+          <td><span class="role-{{ u.role|lower }}">{{ u.role }}</span></td>
+          <td style="color:var(--muted);">{{ u.teacher_link.name if u.teacher_link else '—' }}</td>
+          <td style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-sm" onclick="openReset({{ u.id }}, '{{ u.username }}')">Reset Password</button>
+            <form method="POST" action="{{ url_for('delete_user', id=u.id) }}" onsubmit="return confirm('Delete user {{ u.username }}?')">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn-sm btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not users %}
+        <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:48px;">No user accounts yet. The admin login uses environment variables.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="addUserModal">
+  <div class="modal">
+    <h3>Add User</h3>
+    <form method="POST" action="{{ url_for('add_user') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>Username *</label>
+        <input type="text" name="username" required maxlength="50" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Password *</label>
+        <input type="password" name="password" required autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select name="role">
+          <option value="Admin">Admin</option>
+          <option value="Teacher" selected>Teacher</option>
+          <option value="Bursar">Bursar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Link to Teacher (optional)</label>
+        <select name="teacher_id">
+          <option value="">— None —</option>
+          {% for t in teachers %}
+          <option value="{{ t.id }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('addUserModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Create User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <h3>Reset Password</h3>
+    <p id="resetLabel" style="color:var(--muted);margin-bottom:16px;font-size:0.875rem;"></p>
+    <form method="POST" id="resetForm">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>New Password *</label>
+        <input type="password" name="password" required autocomplete="new-password">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('resetModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openReset(id, username) {
+    document.getElementById('resetLabel').textContent = 'Resetting password for: ' + username;
+    document.getElementById('resetForm').action = '/users/reset-password/' + id;
+    document.getElementById('resetModal').classList.add('open');
+  }
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  });
+</script>
+{% endblock %}

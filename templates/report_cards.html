@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Report Cards – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  /* ── Card sub-components ── */
+  .card-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .card-head-sub { font-size: 0.78rem; color: var(--muted); display: block; margin-top: 2px; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { padding: 10px 22px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .data-table td { padding: 13px 22px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+
+  /* ── Search ── */
+  .search-ctrl { position: relative; }
+  .search-ctrl input {
+    width: 260px; padding: 8px 12px 8px 34px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.875rem;
+    color: var(--text); background: var(--surface); outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-ctrl input:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(232,97,74,0.1); }
+  .search-ctrl svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+  /* ── View Report button ── */
+  .btn-report {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: var(--radius-sm);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+    background: var(--surface); color: var(--text);
+    border: 1.5px solid var(--border);
+    text-decoration: none;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+  .btn-report:hover { background: var(--coral-bg); border-color: var(--coral-mid); color: var(--coral); }
+
+  @media (max-width: 640px) { .search-ctrl input { width: 100%; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Report <em>Cards</em></h1>
+    <p class="page-subtitle">View individual student academic reports and performance tracking.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h3>All Students</h3>
+      <span class="card-head-sub">Click "View Report" to see grades and attendance summaries</span>
+    </div>
+    <div class="search-ctrl">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="studentSearch" placeholder="Search by name or ID…" onkeyup="filterReports()">
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="data-table" id="reportTable">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>ID Number</th>
+          <th>Stream</th>
+          <th>Enrolled In</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for student in students %}
+        <tr>
+          <td>
+            <div style="font-weight:600;">{{ student.first_name }} {{ student.surname }}</div>
+          </td>
+          <td><span class="badge badge-muted">{{ student.id_number }}</span></td>
+          <td style="color:var(--muted);">{{ student.stream or '—' }}</td>
+          <td>
+            <span style="font-weight:600;">{{ student.courses | length }}</span>
+            <span style="color:var(--muted); font-size:0.82rem;"> course{{ 's' if student.courses | length != 1 }}</span>
+          </td>
+          <td>
+            <a href="{{ url_for('student_report', student_id=student.id) }}" class="btn-report">
+              <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              View Report
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+      {% if not students %}
+        <tr>
+          <td colspan="5" style="text-align:center; color:var(--muted); padding:48px;">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="#ccc" stroke-width="1" style="display:block;margin:0 auto 12px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            No students found in the database.
+          </td>
+        </tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterReports() {
+    const filter = document.getElementById('studentSearch').value.toLowerCase();
+    document.querySelectorAll('#reportTable tbody tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+  }
+</script>
+{% endblock %}

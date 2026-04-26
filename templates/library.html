@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Library – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  .card-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { padding: 10px 18px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .data-table td { padding: 12px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+  .badge-avail { background: #e8f4ee; color: #1e7a3c; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-out   { background: #fdecea; color: #c0392b; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-overdue { background: #fff3cd; color: #856404; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border-radius:16px; padding:28px; width:100%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+  .modal h3 { font-family:'Fraunces',serif; font-size:1.2rem; margin:0 0 20px; }
+  .form-row { display:flex; gap:12px; flex-wrap:wrap; }
+  .form-group { display:flex; flex-direction:column; gap:6px; flex:1; min-width:180px; margin-bottom:14px; }
+  .form-group label { font-size:0.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .form-group input, .form-group select { padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.875rem; background:var(--bg); color:var(--text); outline:none; }
+  .form-group input:focus, .form-group select:focus { border-color:var(--coral); box-shadow:0 0 0 4px rgba(232,97,74,0.1); }
+  .btn-primary { padding:9px 20px; background:var(--coral); color:#fff; border:none; border-radius:var(--radius-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.875rem; font-weight:600; cursor:pointer; }
+  .btn-ghost   { padding:9px 20px; background:transparent; color:var(--text); border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:'Plus Jakarta Sans',sans-serif; font-size:0.875rem; cursor:pointer; }
+  .btn-sm      { padding:5px 12px; font-size:0.78rem; border-radius:6px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; font-weight:600; border:1.5px solid var(--border); background:var(--surface); color:var(--text); }
+  .btn-sm:hover { background:var(--bg); }
+  .btn-danger  { border-color:#fca5a5; color:#c0392b; }
+  .btn-danger:hover { background:#fdecea; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title">Library</h1>
+    <p class="page-subtitle">Book inventory and borrowing records.</p>
+  </div>
+  <button class="btn-primary" onclick="document.getElementById('addBookModal').classList.add('open')">+ Add Book</button>
+</div>
+
+<!-- Stats row -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px;">
+  <div class="card" style="padding:20px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:700;color:var(--coral);">{{ books|length }}</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Total Titles</div>
+  </div>
+  <div class="card" style="padding:20px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:700;color:#1e7a3c;">{{ books|sum(attribute='copies_avail') }}</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Available Copies</div>
+  </div>
+  <div class="card" style="padding:20px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:700;color:#2563eb;">{{ borrows|length }}</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Currently Borrowed</div>
+  </div>
+  <div class="card" style="padding:20px;text-align:center;">
+    {% set overdue_count = borrows|selectattr('is_overdue')|list|length %}
+    <div style="font-size:1.8rem;font-weight:700;color:{% if overdue_count > 0 %}#c0392b{% else %}var(--muted){% endif %};">{{ overdue_count }}</div>
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">Overdue</div>
+  </div>
+</div>
+
+<!-- Book Inventory -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-head">
+    <h3>Book Inventory</h3>
+    <button class="btn-primary" onclick="document.getElementById('borrowModal').classList.add('open')">Issue Book</button>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th><th>Author</th><th>Category</th><th>ISBN</th><th>Copies</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for book in books %}
+        <tr>
+          <td style="font-weight:600;">{{ book.title }}</td>
+          <td style="color:var(--muted);">{{ book.author or '—' }}</td>
+          <td>{{ book.category or '—' }}</td>
+          <td style="font-family:monospace;font-size:0.82rem;">{{ book.isbn or '—' }}</td>
+          <td>{{ book.copies_avail }} / {{ book.copies_total }}</td>
+          <td><span class="badge-{{ 'avail' if book.copies_avail > 0 else 'out' }}">{{ book.status }}</span></td>
+          <td>
+            <form method="POST" action="{{ url_for('delete_book', id=book.id) }}" onsubmit="return confirm('Delete this book?')">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn-sm btn-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not books %}
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:48px;">No books added yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Active Borrows -->
+<div class="card">
+  <div class="card-head"><h3>Currently Borrowed</h3></div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr><th>Book</th><th>Student</th><th>Borrowed</th><th>Due</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for rec in borrows %}
+        <tr>
+          <td style="font-weight:600;">{{ rec.book.title }}</td>
+          <td>{{ rec.student.first_name }} {{ rec.student.surname }}</td>
+          <td style="color:var(--muted);">{{ rec.borrow_date.strftime('%d %b %Y') }}</td>
+          <td>{{ rec.due_date.strftime('%d %b %Y') }}</td>
+          <td>
+            {% if rec.is_overdue %}
+              <span class="badge-overdue">Overdue</span>
+            {% else %}
+              <span class="badge-avail">On Loan</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="POST" action="{{ url_for('return_book', id=rec.id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn-sm">Mark Returned</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not borrows %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:48px;">No books currently borrowed.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Book Modal -->
+<div class="modal-overlay" id="addBookModal">
+  <div class="modal">
+    <h3>Add Book</h3>
+    <form method="POST" action="{{ url_for('add_book') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row">
+        <div class="form-group" style="flex:2;min-width:100%;">
+          <label>Title *</label>
+          <input type="text" name="title" required maxlength="150">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Author</label>
+          <input type="text" name="author" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label>ISBN</label>
+          <input type="text" name="isbn" maxlength="30">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category">
+            <option value="">— Select —</option>
+            <option>Textbook</option><option>Reference</option><option>Fiction</option>
+            <option>Science</option><option>Mathematics</option><option>History</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Number of Copies</label>
+          <input type="number" name="copies_total" value="1" min="1" max="999">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('addBookModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Add Book</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Issue Book Modal -->
+<div class="modal-overlay" id="borrowModal">
+  <div class="modal">
+    <h3>Issue Book to Student</h3>
+    <form method="POST" action="{{ url_for('borrow_book') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>Book *</label>
+        <select name="book_id" required>
+          <option value="">— Select book —</option>
+          {% for book in books if book.copies_avail > 0 %}
+          <option value="{{ book.id }}">{{ book.title }} ({{ book.copies_avail }} left)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Student *</label>
+        <select name="student_id" required>
+          <option value="">— Select student —</option>
+          {% for s in students %}
+          <option value="{{ s.id }}">{{ s.first_name }} {{ s.surname }} – {{ s.id_number }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Loan Period (days)</label>
+        <input type="number" name="days" value="14" min="1" max="90">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn-ghost" onclick="document.getElementById('borrowModal').classList.remove('open')">Cancel</button>
+        <button type="submit" class="btn-primary">Issue</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+  });
+</script>
+{% endblock %}

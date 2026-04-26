@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Exam Results – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+.brand-headline h2 {
+      font-family: 'Fraunces', serif;
+      font-size: 3rem;
+      font-weight: 300;
+      color: #fff;
+      line-height: 1.2;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+    .brand-headline h2 em { font-style: italic; color: var(--amber); }
+    .brand-headline p { color: rgba(255,255,255,0.7); font-size: 0.95rem; line-height: 1.6; }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    .field-input:focus { border-color: var(--coral); box-shadow: 0 0 0 4px rgba(232,97,74,0.1); }
+    
+    .btn-submit:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-submit:active { transform: none; opacity: 1; }
+    
+    
+    .demo-hint strong { font-weight: 600; color: #7A5012; }
+    @media (max-width: 768px) {
+      
+      
+      
+    }
+{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('exams_page') }}" class="btn-back mb-3 d-inline-flex">← Back to Exams</a>
+    <div class="mb-4">
+      <div class="page-title">{{ exam.title }}</div>
+      <div class="page-sub">{{ exam.course.title }} &middot; {{ exam.exam_type }} &middot; {{ exam.exam_date.strftime('%d %b %Y') }} &middot; Out of {{ exam.total_marks }} marks</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Enter Student Marks</div>
+        <span style="font-size:0.8rem;color:var(--text-muted);">{{ exam.course.students | length }} students enrolled</span>
+      </div>
+      <form method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <table class="table">
+          <thead><tr><th>#</th><th>Student</th><th>ID</th><th>Marks (/ {{ exam.total_marks }})</th><th>Grade</th><th>Remarks</th></tr></thead>
+          <tbody>
+          {% for student in exam.course.students %}
+          {% set result = results_map.get(student.id) %}
+          <tr>
+            <td style="color:var(--text-muted);">{{ loop.index }}</td>
+            <td style="font-weight:500;">{{ student.name }}</td>
+            <td style="color:var(--text-muted);font-size:0.82rem;">{{ student.id_number }}</td>
+            <td>
+              <input type="number" name="marks_{{ student.id }}" class="marks-input"
+                min="0" max="{{ exam.total_marks }}" step="0.5"
+                value="{{ result.marks if result else '' }}"
+                placeholder="0–{{ exam.total_marks }}"
+                oninput="updateGrade(this, {{ exam.total_marks }}, 'grade_{{ student.id }}')">
+            </td>
+            <td>
+              <span id="grade_{{ student.id }}" class="grade-badge grade-{{ result.grade if result else '' }}">
+                {{ result.grade if result else '—' }}
+              </span>
+            </td>
+            <td>
+              <input type="text" name="remarks_{{ student.id }}" class="remarks-input"
+                value="{{ result.remarks if result else '' }}" placeholder="Optional remark">
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+          <button type="submit" class="btn-primary">Save All Marks</button>
+        </div>
+      </form>
+    </div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateGrade(input, total, gradeId) {
+  const marks = parseFloat(input.value);
+  const el = document.getElementById(gradeId);
+  if (isNaN(marks) || input.value === '') { el.textContent = '—'; el.className = 'grade-badge'; return; }
+  const pct = (marks / total) * 100;
+  let grade, cls;
+  if (pct >= 80) { grade = 'A'; cls = 'grade-A'; }
+  else if (pct >= 70) { grade = 'B'; cls = 'grade-B'; }
+  else if (pct >= 60) { grade = 'C'; cls = 'grade-C'; }
+  else if (pct >= 50) { grade = 'D'; cls = 'grade-D'; }
+  else { grade = 'E'; cls = 'grade-E'; }
+  el.textContent = grade;
+  el.className = 'grade-badge ' + cls;
+}
+</script>
+{% endblock %}

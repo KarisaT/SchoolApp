@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% block title %}Courses – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+  /* ── Page Header ── */
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+
+  /* ── Stats Row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--surface); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); position: relative; overflow: hidden; }
+  .stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+  .stat-value { font-size: 1.8rem; font-weight: 700; margin: 4px 0; color: var(--text); font-family: 'Fraunces', serif; }
+  .stat-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-sub { font-size: 0.75rem; color: #1e7a3c; margin-top: 4px; }
+  .stat-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+
+  /* ── Content Grid ── */
+  .content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 2rem; }
+
+  /* ── Card Panel ── */
+  .card-panel { background: var(--surface); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .card-header h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .card-header-sub { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* ── Search & Filter ── */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
+  .search-box { position: relative; flex: 1; min-width: 180px; }
+  .search-box input { width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.875rem; outline: none; transition: border-color 0.15s; background: var(--surface-2); }
+  .search-box input:focus { border-color: var(--coral, #e8614a); background: var(--surface); }
+  .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .filter-select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.875rem; outline: none; background: var(--surface-2); cursor: pointer; }
+  .filter-select:focus { border-color: var(--coral, #e8614a); }
+
+  /* ── Tabs ── */
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 1.5rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 1px; }
+  .tab-btn { padding: 10px 18px; border: none; background: none; cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.875rem; font-weight: 500; border-bottom: 2px solid transparent; transition: 0.15s; margin-bottom: -1px; font-family: inherit; }
+  .tab-btn.active { color: var(--coral, #e8614a); border-bottom-color: var(--coral, #e8614a); font-weight: 600; }
+  .tab-count { background: var(--bg); border: 1px solid var(--border); padding: 1px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { padding: 10px 16px; text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #f0f0f0; background: var(--surface-2); }
+  .data-table td { padding: 13px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--surface-2); }
+
+  /* ── Course Cell ── */
+  .course-cell { display: flex; align-items: center; gap: 12px; }
+  .course-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.78rem; flex-shrink: 0; color: #2563eb; background: #eff6ff; }
+  .course-name { font-weight: 600; font-size: 0.9rem; }
+  .course-id-tag { font-size: 0.73rem; color: var(--text-muted); }
+
+  /* ── Badges ── */
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 500; display: inline-block; }
+  .badge-lecture  { background: #eff6ff; color: #2563eb; }
+  .badge-lab      { background: #fef3e2; color: #b85c00; }
+  .badge-session  { background: #e8f4ee; color: #1e7a3c; }
+  .badge-online   { background: #f3e8ff; color: #7c3aed; }
+  .badge-inperson { background: #e8f4ee; color: #1e7a3c; }
+  .badge-hybrid   { background: #fef9c3; color: #92400e; }
+
+  /* ── Progress bar (enrollment) ── */
+  .enroll-bar { display: flex; align-items: center; gap: 8px; }
+  .enroll-track { flex: 1; height: 6px; background: var(--bg); border-radius: 999px; overflow: hidden; min-width: 60px; }
+  .enroll-fill { height: 100%; border-radius: 999px; background: #2563eb; }
+  .enroll-label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+
+  /* ── Actions ── */
+  .actions { display: flex; gap: 6px; }
+  .btn-action { font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; font-weight: 500; font-family: inherit; transition: 0.15s; text-decoration: none; display: inline-block; }
+  .btn-enroll { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+  .btn-enroll:hover { background: #dbeafe; }
+  .btn-edit   { background: var(--bg); color: var(--text-2); border-color: var(--border); }
+  .btn-edit:hover { background: #e5e7eb; }
+  .btn-view   { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+  .btn-view:hover { background: #dcfce7; }
+  .btn-del    { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .btn-del:hover { background: #fee2e2; }
+
+  /* ── Sidebar Widgets ── */
+  .widget { background: var(--surface); border-radius: 12px; padding: 1.25rem 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+  .widget h4 { font-family: 'Fraunces', serif; font-size: 0.95rem; font-weight: 600; margin: 0 0 1rem; }
+  .widget-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .widget-row:last-child { border-bottom: none; }
+  .widget-label { color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .widget-val { font-weight: 700; }
+
+  /* Top courses list */
+  .top-course-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .top-course-row:last-child { border-bottom: none; }
+  .top-rank { width: 22px; height: 22px; border-radius: 6px; background: var(--bg); font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; color: var(--muted); flex-shrink: 0; }
+  .top-rank.gold { background: #fef9c3; color: #92400e; }
+  .top-course-name { font-size: 0.85rem; font-weight: 600; flex: 1; }
+  .top-count { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* ── Empty State ── */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state svg { margin-bottom: 12px; opacity: 0.3; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* ── Modal ── */
+  .modal-backdrop { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-backdrop.open { display: flex; }
+  .modal-content { background: var(--surface); padding: 2rem; border-radius: 14px; width: 100%; max-width: 500px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  .modal-title { font-family: 'Fraunces', serif; font-size: 1.2rem; font-weight: 600; margin: 0 0 1.5rem; }
+  .modal-close { position: absolute; top: 1.25rem; right: 1.25rem; background: none; border: none; cursor: pointer; font-size: 1.4rem; color: var(--muted); line-height: 1; }
+  .modal-close:hover { color: var(--text-2); }
+  .form-group { margin-bottom: 1.1rem; }
+  .form-label { display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-2); }
+  .form-control { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.875rem; outline: none; transition: border-color 0.15s; font-family: inherit; box-sizing: border-box; }
+  .form-control:focus { border-color: var(--coral, #e8614a); box-shadow: 0 0 0 3px rgba(232,97,74,0.1); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; }
+
+  @media (max-width: 1024px) { .content-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .toolbar { flex-direction: column; align-items: stretch; }
+  }
+  @media (max-width: 480px) { .stats-row { grid-template-columns: 1fr; } }
+
+  /* ── Group Badges ── */
+  .badge-groupa   { background: #eff6ff; color: #2563eb; }
+  .badge-groupb   { background: #e8f4ee; color: #1e7a3c; }
+  .badge-groupc   { background: #fef3e2; color: #b85c00; }
+  .badge-groupd   { background: #f3e8ff; color: #7c3aed; }
+
+  /* ── Dark mode overrides ── */
+  body.dark-mode .stat-card,
+  body.dark-mode .card-panel,
+  body.dark-mode .widget { background: var(--surface); border-color: var(--border); box-shadow: none; }
+  body.dark-mode .data-table th { background: #161616; color: var(--muted); border-color: var(--border); }
+  body.dark-mode .data-table td { border-color: var(--border); color: var(--text-2); }
+  body.dark-mode .data-table tr:hover td { background: #1E1E1E; }
+  body.dark-mode .tab-bar { border-color: var(--border); }
+  body.dark-mode .tab-btn { color: var(--muted); }
+  body.dark-mode .tab-btn.active { color: var(--coral); }
+  body.dark-mode .tab-count { background: var(--surface-2); border-color: var(--border); color: var(--muted); }
+  body.dark-mode .search-box input,
+  body.dark-mode .filter-select,
+  body.dark-mode .form-control { background: #222222; border-color: var(--border); color: var(--text); }
+  body.dark-mode .search-box input:focus,
+  body.dark-mode .filter-select:focus { border-color: var(--coral); }
+  body.dark-mode .search-box input::placeholder { color: #5A5A56; }
+  body.dark-mode .enroll-track { background: #2A2A2A; }
+  body.dark-mode .widget-row { border-color: var(--border); }
+  body.dark-mode .top-course-row { border-color: var(--border); }
+  body.dark-mode .top-rank { background: var(--surface-2); color: var(--muted); }
+  body.dark-mode .card-header h3 { color: var(--text); }
+  body.dark-mode .top-course-name { color: var(--text-2); }
+  body.dark-mode .stat-sub { color: #5ADE90; }
+  body.dark-mode .btn-action { color: var(--text-2); background: var(--surface-2); border-color: var(--border); }
+  body.dark-mode .btn-enroll { background: #101828; color: #70B8FA; border-color: #1A2A48; }
+  body.dark-mode .btn-edit { background: var(--surface-2); color: var(--text-2); border-color: var(--border); }
+  body.dark-mode .btn-view { background: #0D2218; color: #5ADE90; border-color: #1C4028; }
+  body.dark-mode .btn-del { background: #3A1A1A; color: #FF9090; border-color: #5A2828; }
+  body.dark-mode .course-name { color: var(--text); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><em>Course</em> Registry</h1>
+    <p class="page-subtitle">Manage and view course records</p>
+  </div>
+  <button class="btn btn-primary" onclick="openModal('addModal')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add Course
+  </button>
+</div>
+
+<!-- Stats Row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#eff6ff;">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563eb" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    </div>
+    <div class="stat-label">Total Courses</div>
+    <div class="stat-value">{{ courses | length }}</div>
+    <div class="stat-sub">Active curriculum</div>
+    <div class="stat-bar" style="background:#2563eb;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#e8f4ee;">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#1e7a3c" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="stat-label">Total Enrolled</div>
+    <div class="stat-value">{{ courses | sum(attribute='student_count') }}</div>
+    <div class="stat-sub">Across all courses</div>
+    <div class="stat-bar" style="background:#1e7a3c;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#fef3e2;">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#b85c00" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+    </div>
+    <div class="stat-label">Teachers Assigned</div>
+    <div class="stat-value">{{ courses | selectattr('assigned_teacher_name') | list | length }}</div>
+    <div class="stat-sub">With assigned teachers</div>
+    <div class="stat-bar" style="background:#b85c00;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:#f3e8ff;">
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#7c3aed" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div class="stat-label">Avg. time</div>
+    <div class="stat-value">
+      {% if courses %}{{ (courses | sum(attribute='duration') / courses | length) | round | int }}m{% else %}—{% endif %}
+    </div>
+    <div class="stat-sub">Per session</div>
+    <div class="stat-bar" style="background:#7c3aed;"></div>
+  </div>
+</div>
+
+<!-- Main Content + Sidebar -->
+<div class="content-grid">
+
+  <!-- Left: Tabs + Tables -->
+  <div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('courses', this)">
+        Courses <span class="tab-count">{{ courses | length }}</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('exams', this)">
+        Exams <span class="tab-count">{{ exams | length }}</span>
+      </button>
+    </div>
+
+    <!-- Courses Tab -->
+    <div id="tab-courses" class="tab-pane">
+      <div class="card-panel">
+        <div class="card-header">
+          <h3>All Courses</h3>
+          <span class="card-header-sub">{{ courses | length }} total</span>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="search-box">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="courseSearch" placeholder="Search courses…" oninput="filterCourses()">
+          </div>
+          <select class="filter-select" id="typeFilter" onchange="filterCourses()">
+            <option value="">All Types</option>
+            <option value="lecture">Lecture</option>
+            <option value="lab">Lab</option>
+            <option value="session">Session</option>
+            <option value="In-person">In-person</option>
+            <option value="Online">Online</option>
+            <option value="Hybrid">Hybrid</option>
+          </select>
+          <select class="filter-select" id="groupFilter" onchange="filterCourses()">
+            <option value="">All Groups</option>
+            <option value="Group A">Group A – Languages</option>
+            <option value="Group B">Group B – Sciences</option>
+            <option value="Group C">Group C – Humanities</option>
+            <option value="Group D">Group D – Business</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table" id="courseTable">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Group</th>
+                <th>Teacher</th>
+                <th>Type</th>
+                <th>Duration</th>
+                <th>Enrollment</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set max_enroll = namespace(val=1) %}
+              {% for c in courses %}{% if c.student_count > max_enroll.val %}{% set max_enroll.val = c.student_count %}{% endif %}{% endfor %}
+              {% for course in courses %}
+              <tr class="course-row" data-name="{{ course.title | lower }}" data-type="{{ course.session_type | lower }}" data-group="{{ course.subject_group or '' }}">
+                <td>
+                  <div class="course-cell">
+                    <div class="course-icon">{{ course.title[:2].upper() }}</div>
+                    <div>
+                      <div class="course-name">{{ course.title }}</div>
+                      <div class="course-id-tag">{{ course.course_code or ('ID-' ~ course.id) }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  {% if course.subject_group %}
+                    {% set grp = course.subject_group | lower | replace(' ', '') %}
+                    <span class="badge badge-{{ grp }}">{{ course.subject_group }}</span>
+                  {% else %}
+                    <span style="color:var(--text-muted);">—</span>
+                  {% endif %}
+                </td>
+                <td>{{ course.assigned_teacher_name or '—' }}</td>
+                <td>
+                  {% set t = course.session_type | lower %}
+                  <span class="badge badge-{{ t | replace(' ', '') | replace('-', '') }}">
+                    {{ course.session_type or '—' }}
+                  </span>
+                </td>
+                <td>{{ (course.duration ~ ' min') if course.duration else '—' }}</td>
+                <td>
+                  <div class="enroll-bar">
+                    <div class="enroll-track">
+                      <div class="enroll-fill" style="width:{{ ((course.student_count / max_enroll.val) * 100) | round | int if max_enroll.val > 0 else 0 }}%;"></div>
+                    </div>
+                    <span class="enroll-label">{{ course.student_count }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="actions">
+                    <a href="{{ url_for('course_students_page', course_id=course.id) }}" class="btn-action btn-view">View</a>
+                    <form method="POST" action="{{ url_for('delete_course', id=course.id) }}" style="display:inline;" onsubmit="return confirm('Delete this course?');">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn-action btn-del">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state">
+                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    <p>No courses yet. Add your first course above.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <!-- No results message -->
+        <div id="noResults" style="display:none; text-align:center; padding:30px; color:var(--text-muted); font-size:0.875rem;">
+          No courses match your search.
+        </div>
+      </div>
+    </div>
+
+    <!-- Exams Tab -->
+    <div id="tab-exams" class="tab-pane" style="display:none;">
+      <div class="card-panel">
+        <div class="card-header">
+          <h3>Exams</h3>
+          <span class="card-header-sub">{{ exams | length }} total</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Exam</th>
+                <th>Course</th>
+                <th>Date</th>
+                <th>Max Marks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for exam in exams %}
+              <tr>
+                <td><strong>{{ exam.title }}</strong></td>
+                <td>{{ exam.course_title if exam.course_title else '—' }}</td>
+                <td>{{ exam.exam_date if exam.exam_date else '—' }}</td>
+                <td>{{ exam.max_marks }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4">
+                  <div class="empty-state">
+                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <p>No exams found.</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Sidebar -->
+  <div>
+
+    <!-- Enrollment Chart -->
+    <div class="widget">
+      <h4>Enrollment by Course</h4>
+      <canvas id="enrollChart" height="200"></canvas>
+    </div>
+
+    <!-- Top Courses by Enrollment -->
+    <div class="widget">
+      <h4>Top Courses</h4>
+      {% set sorted = courses | sort(attribute='student_count', reverse=True) %}
+      {% for course in sorted[:5] %}
+      <div class="top-course-row">
+        <div class="top-rank {% if loop.index == 1 %}gold{% endif %}">{{ loop.index }}</div>
+        <div class="top-course-name">{{ course.title }}</div>
+        <div class="top-count">{{ course.student_count }} students</div>
+      </div>
+      {% else %}
+      <p style="font-size:0.85rem; color:var(--text-muted);">No data yet.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Session Types Breakdown -->
+    <div class="widget">
+      <h4>Session Types</h4>
+      {% set types = {} %}
+      {% for c in courses %}
+        {% set t = c.session_type or 'Unknown' %}
+        {% if t in types %}{% set _ = types.update({t: types[t] + 1}) %}{% else %}{% set _ = types.update({t: 1}) %}{% endif %}
+      {% endfor %}
+      {% set colors = ['#2563eb','#1e7a3c','#b85c00','#7c3aed','#0891b2'] %}
+      {% for t, count in types.items() %}
+      <div class="widget-row">
+        <div class="widget-label">
+          <div class="dot" style="background:{{ colors[loop.index0 % 5] }};"></div>
+          {{ t }}
+        </div>
+        <span class="widget-val">{{ count }}</span>
+      </div>
+      {% else %}
+      <p style="font-size:0.85rem; color:var(--text-muted);">No data yet.</p>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Add Course Modal -->
+<div id="addModal" class="modal-backdrop" onclick="handleBackdrop(event,'addModal')">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('addModal')">&times;</button>
+    <h2 class="modal-title">Add New Course</h2>
+    <form method="POST" action="{{ url_for('add_course') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">Subject / Category</label>
+        <select id="subjectPicker" class="form-control" onchange="onSubjectPick(this)">
+          <option value="">— Select a subject —</option>
+          <optgroup label="Group A – Languages">
+            <option value="Mathematics|Group A">Mathematics</option>
+            <option value="English|Group A">English</option>
+            <option value="Kiswahili|Group A">Kiswahili</option>
+          </optgroup>
+          <optgroup label="Group B – Sciences">
+            <option value="Biology|Group B">Biology</option>
+            <option value="Chemistry|Group B">Chemistry</option>
+            <option value="Physics|Group B">Physics</option>
+          </optgroup>
+          <optgroup label="Group C – Humanities">
+            <option value="History|Group C">History</option>
+            <option value="Geography|Group C">Geography</option>
+          </optgroup>
+          <optgroup label="Group D – Business">
+            <option value="CRE|Group D">CRE</option>
+            <option value="Business Studies|Group D">Business Studies</option>
+          </optgroup>
+        </select>
+        <!-- hidden fields populated by JS -->
+        <input type="hidden" name="subject_group" id="hiddenGroup">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Course Title <span style="color:var(--text-muted);font-weight:400;">(auto-filled, edit if needed)</span></label>
+        <input type="text" name="title" id="addCourseTitle" class="form-control" placeholder="Pick a subject above first…" required>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Duration (minutes)</label>
+          <input type="number" name="duration" class="form-control" placeholder="60" min="1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Session Type</label>
+          <select name="session_type" class="form-control">
+            <option value="In-person">In-person</option>
+            <option value="Online">Online</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="lecture">Lecture</option>
+            <option value="lab">Lab</option>
+            <option value="session">Session</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign Teacher</label>
+        <select name="teacher_id" class="form-control">
+          <option value="">— No teacher —</option>
+          {% for teacher in teachers %}
+          <option value="{{ teacher.id }}">{{ teacher.name }} ({{ teacher.subject }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Course</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Course Modal -->
+<div id="editModal" class="modal-backdrop" onclick="handleBackdrop(event,'editModal')">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+    <h2 class="modal-title">Edit Course</h2>
+    <form method="POST" id="editForm">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">Course Title</label>
+        <input type="text" name="title" id="editTitle" class="form-control" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // ── Tab switching ──
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).style.display = 'block';
+    btn.classList.add('active');
+  }
+
+  // ── Modals ──
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  function handleBackdrop(e, id) { if (e.target.id === id) closeModal(id); }
+
+  function openEditModal(id, title) {
+    document.getElementById('editTitle').value = title;
+    document.getElementById('editForm').action = '/courses/edit/' + id;
+    openModal('editModal');
+  }
+
+  // ── Subject picker → auto-fill title + hidden group ──
+  function onSubjectPick(sel) {
+    const val = sel.value; // e.g. "Mathematics|Group A"
+    if (!val) return;
+    const [subject, group] = val.split('|');
+    document.getElementById('addCourseTitle').value = subject;
+    document.getElementById('hiddenGroup').value = group;
+  }
+
+  // ── Search & Filter ──
+  function filterCourses() {
+    const q = document.getElementById('courseSearch').value.toLowerCase();
+    const type = document.getElementById('typeFilter').value.toLowerCase();
+    const group = document.getElementById('groupFilter').value.toLowerCase();
+    const rows = document.querySelectorAll('.course-row');
+    let visible = 0;
+    rows.forEach(row => {
+      const nameMatch = row.dataset.name.includes(q);
+      const typeMatch = !type || row.dataset.type.includes(type);
+      const groupMatch = !group || row.dataset.group.toLowerCase() === group;
+      const show = nameMatch && typeMatch && groupMatch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  // ── Enrollment Chart ──
+  const enrollCtx = document.getElementById('enrollChart');
+  if (enrollCtx) {
+    const labels = [{% for c in courses %}"{{ c.title | truncate(15, True, '…') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+    const data   = [{% for c in courses %}{{ c.student_count }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const colors = ['#2563eb','#1e7a3c','#b85c00','#7c3aed','#0891b2','#e8614a'];
+
+    new Chart(enrollCtx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors.slice(0, labels.length).map(c => c + 'cc'),
+          borderWidth: 0,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        cutout: '68%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

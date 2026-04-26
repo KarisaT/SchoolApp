@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parent Portal – SchoolApp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,300&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --coral:     #E8614A; --coral-bg: #FDF0ED; --coral-mid: #F5B5A8;
+      --amber:     #F0A832; --amber-bg: #FEF6E4;
+      --green:     #F0FDF4; --green-mid: #86EFAC;
+      --bg:        #FAFAF8; --surface: #FFFFFF;
+      --text:      #1C1C1A; --muted: #7A7972;
+      --border:    #EBEBEA;
+      --radius:    20px; --radius-sm: 12px;
+      --parent:    #059669;   /* teal/emerald for parent portal */
+      --parent-bg: #ECFDF5;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Nav ── */
+    .portal-nav {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 32px; display: flex; align-items: center; justify-content: space-between;
+      height: 60px; position: sticky; top: 0; z-index: 50;
+    }
+    .nav-brand { font-family: 'Fraunces', serif; font-size: 1.15rem; font-weight: 600; }
+    .nav-brand span { color: var(--parent); }
+    .nav-pill { background: var(--parent-bg); color: var(--parent); border-radius: 20px; padding: 4px 14px; font-size: 0.75rem; font-weight: 700; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .btn-logout { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 0.8rem; font-weight: 600; color: var(--muted); cursor: pointer; text-decoration: none; font-family: inherit; transition: all 0.12s; }
+    .btn-logout:hover { color: var(--coral); border-color: var(--coral-mid); }
+
+    /* ── Child switcher ── */
+    .child-bar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 12px 32px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .child-bar-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 700; }
+    .child-chip {
+      display: flex; align-items: center; gap: 8px; padding: 7px 14px;
+      border-radius: 20px; border: 1.5px solid var(--border); cursor: pointer;
+      background: var(--bg); font-size: 0.82rem; font-weight: 500; color: var(--muted);
+      transition: all 0.12s; text-decoration: none;
+    }
+    .child-chip:hover { border-color: var(--parent); color: var(--parent); }
+    .child-chip.active { background: var(--parent-bg); border-color: var(--parent); color: var(--parent); font-weight: 700; }
+    .child-avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--parent); color: #fff; font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* ── Tab nav ── */
+    .tab-bar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; gap: 2px; overflow-x: auto; }
+    .tab-btn { padding: 14px 18px; border: none; background: none; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.84rem; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; display: flex; align-items: center; gap: 7px; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--parent); border-bottom-color: var(--parent); font-weight: 600; }
+
+    /* ── Body ── */
+    .portal-body { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Alert banner ── */
+    .alert-banner { background: #FEF9C3; border: 1px solid #FDE047; border-radius: var(--radius-sm); padding: 12px 18px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
+    .alert-banner.red { background: #FEE2E2; border-color: #FCA5A5; }
+    .alert-banner.green { background: var(--parent-bg); border-color: var(--green-mid); }
+    .alert-icon { flex-shrink: 0; margin-top: 1px; }
+    .alert-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .alert-body  { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Overview welcome ── */
+    .parent-welcome {
+      background: linear-gradient(135deg, #065F46 0%, #059669 60%, #34D399 100%);
+      border-radius: var(--radius); padding: 26px 30px; color: #fff; margin-bottom: 22px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .pw-sub { font-size: 0.8rem; opacity: 0.65; margin-top: 4px; }
+    .pw-name { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 300; margin-bottom: 2px; }
+    .pw-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pw-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 5px 14px; font-size: 0.75rem; font-weight: 600; }
+
+    /* ── Stats ── */
+    .stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 22px; }
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .stat-val { font-family: 'Fraunces', serif; font-size: 2rem; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+    .stat-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); font-weight: 600; }
+
+    /* ── Section cards ── */
+    .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+    .section-head { padding: 16px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .section-head h3 { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600; }
+    .section-head p { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Attendance timeline ── */
+    .att-month-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); padding: 12px 20px 6px; }
+    .att-week { display: flex; gap: 4px; padding: 4px 20px; }
+    .att-cell { flex: 1; height: 28px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; }
+    .att-cell.present { background: #dcfce7; color: #15803D; }
+    .att-cell.absent  { background: #FEE2E2; color: #B91C1C; }
+    .att-cell.none    { background: var(--bg); color: var(--border); }
+    .att-cell.weekend { background: transparent; }
+    .att-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 20px; }
+    .att-legend { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--muted); }
+    .att-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    /* ── Results table ── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .data-table th { text-align: left; padding: 10px 20px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+    .data-table td { padding: 13px 20px; border-bottom: 1px solid var(--border); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .grade-pill { font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .grade-a { background: #dcfce7; color: #15803D; }
+    .grade-b { background: #EEF2FF; color: #4F46E5; }
+    .grade-c { background: var(--amber-bg); color: #92400e; }
+    .grade-d { background: #FEE2E2; color: #B91C1C; }
+    .progress-mini { width: 70px; height: 5px; background: var(--border); border-radius: 100px; display: inline-block; vertical-align: middle; margin-right: 7px; overflow: hidden; }
+    .progress-mini-fill { height: 100%; border-radius: 100px; }
+
+    /* ── Fee section ── */
+    .fee-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
+    .fee-box { border-radius: var(--radius-sm); padding: 18px; }
+    .fee-box.owed { background: #FEF9C3; border: 1px solid #FDE047; }
+    .fee-box.paid { background: var(--parent-bg); border: 1px solid var(--green-mid); }
+    .fee-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 700; margin-bottom: 6px; }
+    .fee-box.owed .fee-lbl { color: #854D0E; }
+    .fee-box.paid .fee-lbl { color: #065F46; }
+    .fee-val { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 600; }
+    .fee-box.owed .fee-val { color: #92400e; }
+    .fee-box.paid .fee-val { color: var(--parent); }
+    .fee-row { display: flex; align-items: center; padding: 12px 20px; border-top: 1px solid var(--border); gap: 12px; font-size: 0.85rem; }
+    .fee-row-name { flex: 1; font-weight: 600; }
+    .fee-row-date { font-size: 0.75rem; color: var(--muted); }
+    .fee-badge { font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .fee-paid   { background: var(--parent-bg); color: var(--parent); }
+    .fee-unpaid { background: #FEE2E2; color: #B91C1C; }
+
+    .mpesa-btn { display: flex; align-items: center; gap: 10px; background: #00A651; color: #fff; border: none; border-radius: var(--radius-sm); padding: 12px 22px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.88rem; font-weight: 700; cursor: pointer; text-decoration: none; margin: 16px 20px 20px; transition: opacity 0.15s; }
+    .mpesa-btn:hover { opacity: 0.9; }
+
+    /* ── Notifications ── */
+    .notif-item { display: flex; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--border); align-items: flex-start; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { background: var(--parent-bg); }
+    .notif-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .notif-title { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .notif-body  { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+    .notif-time  { font-size: 0.7rem; color: var(--border); }
+    .unread-dot  { width: 7px; height: 7px; border-radius: 50%; background: var(--parent); margin-top: 6px; flex-shrink: 0; }
+
+    @media (max-width: 640px) {
+      .portal-nav { padding: 0 16px; }
+      .child-bar { padding: 10px 16px; }
+      .tab-bar { padding: 0 16px; }
+      .portal-body { padding: 20px 16px; }
+      .stat-row { grid-template-columns: 1fr 1fr; }
+      .fee-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="portal-nav">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="nav-brand">School<span>App</span></div>
+    <span class="nav-pill">Parent Portal</span>
+  </div>
+  <div class="nav-right">
+    <span style="font-size:0.85rem;font-weight:600;color:var(--text);">{{ parent.name }}</span>
+    <a href="{{ url_for('parent_logout') }}" class="btn-logout">Sign out</a>
+  </div>
+</nav>
+
+<!-- Child switcher -->
+{% if children | length > 1 %}
+<div class="child-bar">
+  <span class="child-bar-label">Viewing:</span>
+  {% for child in children %}
+  <a href="{{ url_for('parent_portal', student_id=child.id) }}"
+     class="child-chip {% if child.id == current_child.id %}active{% endif %}">
+    <div class="child-avatar">{{ child.first_name[0] }}{{ child.surname[0] }}</div>
+    {{ child.first_name }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('overview', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Overview
+  </button>
+  <button class="tab-btn" onclick="switchTab('attendance', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Attendance
+    {% if absent_recent > 0 %}<span style="background:#EF4444;color:#fff;border-radius:20px;padding:1px 7px;font-size:0.65rem;font-weight:700;">{{ absent_recent }}</span>{% endif %}
+  </button>
+  <button class="tab-btn" onclick="switchTab('results', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Results
+  </button>
+  <button class="tab-btn" onclick="switchTab('fees', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Fees
+    {% if fee_balance > 0 %}<span style="background:#F59E0B;color:#fff;border-radius:20px;padding:1px 7px;font-size:0.65rem;font-weight:700;">!</span>{% endif %}
+  </button>
+  <button class="tab-btn" onclick="switchTab('notifications', this)">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    Notifications
+    {% if unread_count > 0 %}<span style="background:var(--parent);color:#fff;border-radius:20px;padding:1px 7px;font-size:0.65rem;font-weight:700;">{{ unread_count }}</span>{% endif %}
+  </button>
+</div>
+
+<div class="portal-body">
+
+  <!-- ── Overview ── -->
+  <div class="tab-panel active" id="tab-overview">
+    {% if fee_balance > 0 %}
+    <div class="alert-banner red">
+      <div class="alert-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#B91C1C" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <div>
+        <div class="alert-title">Outstanding Fee Balance</div>
+        <div class="alert-body">{{ current_child.first_name }} has an unpaid balance of KES {{ fee_balance | int }}. Please settle via M-Pesa.</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if absent_recent > 0 %}
+    <div class="alert-banner">
+      <div class="alert-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#854D0E" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div>
+      <div>
+        <div class="alert-title">Recent Absences</div>
+        <div class="alert-body">{{ current_child.first_name }} was absent {{ absent_recent }} time(s) in the last 14 days.</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="parent-welcome">
+      <div>
+        <div style="font-size:0.75rem;opacity:0.65;text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;">Viewing profile for</div>
+        <div class="pw-name">{{ current_child.first_name }} {{ current_child.surname }}</div>
+        <div class="pw-sub">ID: {{ current_child.id_number }} · {{ active_term.name if active_term else 'No active term' }}</div>
+      </div>
+      <div class="pw-badges">
+        <div class="pw-badge">{{ attendance_pct }}% Attendance</div>
+        <div class="pw-badge">Avg {{ average_score }}%</div>
+        {% if fee_balance <= 0 %}<div class="pw-badge" style="background:rgba(52,211,153,0.25);">✓ Fees Clear</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="stat-val" style="color:var(--parent);">{{ attendance_pct }}%</div>
+        <div class="stat-lbl">Attendance Rate</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val">{{ average_score }}%</div>
+        <div class="stat-lbl">Average Score</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:{% if fee_balance > 0 %}#B91C1C{% else %}var(--parent){% endif %};">KES {{ fee_balance | int }}</div>
+        <div class="stat-lbl">Fee Balance</div>
+      </div>
+    </div>
+
+    <!-- Recent activity summary -->
+    <div class="section-card">
+      <div class="section-head"><h3>Recent Activity</h3></div>
+      {% for notif in recent_notifications[:5] %}
+      <div class="notif-item {% if not notif.read %}unread{% endif %}">
+        <div class="notif-icon" style="background:{{ notif.icon_bg }};">
+          {{ notif.icon_svg | safe }}
+        </div>
+        <div style="flex:1;">
+          <div class="notif-title">{{ notif.title }}</div>
+          <div class="notif-body">{{ notif.body }}</div>
+          <div class="notif-time">{{ notif.time_ago }}</div>
+        </div>
+        {% if not notif.read %}<div class="unread-dot"></div>{% endif %}
+      </div>
+      {% else %}
+      <div style="padding:40px;text-align:center;color:var(--muted);font-size:0.85rem;">No recent activity.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ── Attendance ── -->
+  <div class="tab-panel" id="tab-attendance">
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <h3>Attendance History</h3>
+          <p>{{ active_term.name if active_term else 'Current period' }}</p>
+        </div>
+        <div style="display:flex;gap:10px;font-size:0.82rem;">
+          <strong style="color:#15803D;">{{ present_count }} Present</strong>
+          <strong style="color:#B91C1C;">{{ absent_count }} Absent</strong>
+        </div>
+      </div>
+      {% for month, weeks in attendance_by_month.items() %}
+      <div class="att-month-label">{{ month }}</div>
+      {% for week in weeks %}
+      <div class="att-week">
+        {% for day in week %}
+        <div class="att-cell {{ day.status | lower }}" title="{{ day.date }}: {{ day.status }}">
+          {% if day.status == 'Present' %}P{% elif day.status == 'Absent' %}A{% else %}·{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% endfor %}
+      <div class="att-footer">
+        <div class="att-legend"><div class="att-dot" style="background:#dcfce7;"></div>Present</div>
+        <div class="att-legend"><div class="att-dot" style="background:#FEE2E2;"></div>Absent</div>
+        <div class="att-legend"><div class="att-dot" style="background:var(--bg);border:1px solid var(--border);"></div>No data</div>
+        <div style="margin-left:auto;font-size:0.8rem;color:var(--muted);">Rate: <strong style="color:var(--text);">{{ attendance_pct }}%</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Results ── -->
+  <div class="tab-panel" id="tab-results">
+    <div class="section-card">
+      <div class="section-head"><h3>Exam Results</h3><p>All recorded scores</p></div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Course</th><th>Exam</th><th>Date</th><th>Score</th><th>Grade</th></tr></thead>
+          <tbody>
+            {% for r in all_results %}
+            <tr>
+              <td style="font-weight:600;">{{ r.exam.course.title }}</td>
+              <td>{{ r.exam.name }}</td>
+              <td style="color:var(--muted);font-size:0.8rem;white-space:nowrap;">{{ r.exam.date }}</td>
+              <td>
+                <div class="progress-mini"><div class="progress-mini-fill" style="width:{{ r.score }}%;background:{% if r.score >= 70 %}#22c55e{% elif r.score >= 50 %}#F0A832{% else %}#ef4444{% endif %};"></div></div>
+                {{ r.score }}%
+              </td>
+              <td><span class="grade-pill grade-{{ r.grade | lower }}">{{ r.grade }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="text-align:center;padding:50px;color:var(--muted);">No results yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Fees ── -->
+  <div class="tab-panel" id="tab-fees">
+    <div class="section-card">
+      <div class="section-head"><h3>Fee Statement</h3><p>{{ current_child.first_name }}'s account</p></div>
+      <div class="fee-summary">
+        <div class="fee-box owed">
+          <div class="fee-lbl">Outstanding Balance</div>
+          <div class="fee-val">KES {{ fee_balance | int }}</div>
+          <div style="font-size:0.75rem;opacity:0.65;margin-top:4px;">Due by {{ next_due_date or 'N/A' }}</div>
+        </div>
+        <div class="fee-box paid">
+          <div class="fee-lbl">Total Paid</div>
+          <div class="fee-val">KES {{ total_paid | int }}</div>
+          <div style="font-size:0.75rem;opacity:0.65;margin-top:4px;">{{ payment_count }} payment(s)</div>
+        </div>
+      </div>
+      {% for item in fee_items %}
+      <div class="fee-row">
+        <div class="fee-row-name">{{ item.description }}</div>
+        <div class="fee-row-date">{{ item.date }}</div>
+        <div style="font-family:'Fraunces',serif;font-size:1rem;font-weight:600;">KES {{ item.amount | int }}</div>
+        <span class="fee-badge {% if item.paid %}fee-paid{% else %}fee-unpaid{% endif %}">{{ 'Paid' if item.paid else 'Unpaid' }}</span>
+      </div>
+      {% else %}
+      <div style="padding:40px;text-align:center;color:var(--muted);">No fee records found.</div>
+      {% endfor %}
+      {% if fee_balance > 0 %}
+      <a href="{{ url_for('parent_mpesa_pay', student_id=current_child.id) }}" class="mpesa-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Pay via M-Pesa · KES {{ fee_balance | int }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Notifications ── -->
+  <div class="tab-panel" id="tab-notifications">
+    <div class="section-card">
+      <div class="section-head">
+        <h3>Notifications</h3>
+        {% if unread_count > 0 %}
+        <a href="{{ url_for('mark_all_read') }}" style="font-size:0.78rem;color:var(--parent);text-decoration:none;font-weight:600;">Mark all read</a>
+        {% endif %}
+      </div>
+      {% for notif in all_notifications %}
+      <div class="notif-item {% if not notif.read %}unread{% endif %}">
+        <div class="notif-icon" style="background:{{ notif.icon_bg }};">{{ notif.icon_svg | safe }}</div>
+        <div style="flex:1;">
+          <div class="notif-title">{{ notif.title }}</div>
+          <div class="notif-body">{{ notif.body }}</div>
+          <div class="notif-time">{{ notif.time_ago }}</div>
+        </div>
+        {% if not notif.read %}<div class="unread-dot"></div>{% endif %}
+      </div>
+      {% else %}
+      <div style="padding:60px;text-align:center;color:var(--muted);">
+        <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" style="display:block;margin:0 auto 12px;opacity:0.3;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+        No notifications yet.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div><!-- /portal-body -->
+
+<script>
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} – Enrolled Students{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    .page-container { max-width: 960px; margin: 0 auto; padding-bottom: 4rem; }
+
+    /* Course info banner */
+    .course-banner {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 24px;
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .course-banner-left { display: flex; align-items: center; gap: 16px; }
+    .course-icon-lg {
+        width: 52px; height: 52px;
+        background: #eff6ff;
+        color: #2563eb;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem; font-weight: 700;
+        flex-shrink: 0;
+    }
+    .course-banner h2 { margin: 0; font-size: 1.2rem; color: var(--text-dark); }
+    .course-banner p  { margin: 4px 0 0; color: var(--text-muted); font-size: 0.88rem; }
+    .enrolled-count-badge {
+        background: var(--accent);
+        color: white;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    /* Search bar */
+    .search-bar-wrap {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+    .search-input {
+        flex: 1;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        background: #fafafa;
+        transition: 0.2s;
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px rgba(46,91,138,0.07); }
+
+    /* Student table */
+    .students-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #f0f0f0;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    }
+
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table thead th {
+        background: #fafafa;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        padding: 14px 20px;
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .data-table tbody tr {
+        border-bottom: 1px solid #f9f9f9;
+        transition: background 0.15s;
+    }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:hover { background: #fcfcfc; }
+    .data-table td { padding: 14px 20px; font-size: 0.9rem; color: var(--text-dark); vertical-align: middle; }
+
+    .avatar-sm {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: #f0f4ff;
+        color: #2e5b8a;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 0.8rem; font-weight: 700;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+    .student-cell { display: flex; align-items: center; }
+    .student-name { font-weight: 600; display: block; }
+    .student-id-tag { font-size: 0.78rem; color: var(--text-muted); }
+
+    .stream-badge {
+        font-size: 0.75rem; font-weight: 600;
+        background: #f1f5f9; color: #475569;
+        padding: 3px 10px; border-radius: 6px;
+        display: inline-block;
+    }
+
+    /* Empty state */
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: var(--text-muted);
+    }
+    .empty-state svg { opacity: 0.3; margin-bottom: 1rem; }
+    .empty-state p { margin: 0 0 1rem; font-size: 0.95rem; }
+
+    /* Link to manage */
+    .manage-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 0.85rem; font-weight: 600;
+        color: var(--accent); text-decoration: none;
+        padding: 8px 16px; border: 1px solid #bfdbfe;
+        border-radius: 8px; background: #eff6ff;
+        transition: 0.15s;
+    }
+    .manage-link:hover { background: #dbeafe; }
+
+    @media (max-width: 600px) {
+        .data-table thead th:nth-child(3),
+        .data-table tbody td:nth-child(3) { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
+        <a href="{{ url_for('courses_page') }}" style="text-decoration:none; color:var(--text-muted); font-size:0.9rem;">← Back to Courses</a>
+        <h1 class="page-title">Enrolled <em>Students</em></h1>
+    </div>
+
+    <!-- Course Banner -->
+    <div class="course-banner">
+        <div class="course-banner-left">
+            <div class="course-icon-lg">{{ course.title[:2].upper() }}</div>
+            <div>
+                <h2>{{ course.title }}</h2>
+                <p>
+                    {{ course.assigned_teacher_name or 'No teacher assigned' }}
+                    {% if course.session_type %} &middot; {{ course.session_type }}{% endif %}
+                    {% if course.duration %} &middot; {{ course.duration }} min{% endif %}
+                </p>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <span class="enrolled-count-badge" id="visibleCount">{{ students|length }} Student{{ 's' if students|length != 1 }}</span>
+            <a href="{{ url_for('enrollment_page', course_id=course.id) }}" class="manage-link">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Manage Enrollment
+            </a>
+        </div>
+    </div>
+
+    <!-- Search -->
+    {% if students %}
+    <div class="search-bar-wrap">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search by name, ID or class…" oninput="filterStudents()">
+    </div>
+    {% endif %}
+
+    <!-- Students Table -->
+    <div class="students-card">
+        {% if students %}
+        <table class="data-table" id="studentsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student</th>
+                    <th>Class / Stream</th>
+                    <th>Contact</th>
+                </tr>
+            </thead>
+            <tbody id="studentsBody">
+                {% for student in students %}
+                <tr class="student-row"
+                    data-name="{{ (student.first_name ~ ' ' ~ student.surname) | lower }}"
+                    data-id="{{ student.id_number | lower }}"
+                    data-stream="{{ (student.stream or '') | lower }}">
+                    <td style="color:var(--text-muted); font-size:0.8rem;">{{ loop.index }}</td>
+                    <td>
+                        <div class="student-cell">
+                            <div class="avatar-sm">{{ student.first_name[0] }}{{ student.surname[0] }}</div>
+                            <div>
+                                <span class="student-name">{{ student.first_name }} {{ student.surname }}</span>
+                                <span class="student-id-tag">{{ student.id_number }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if student.stream %}
+                            <span class="stream-badge">{{ student.stream }}</span>
+                        {% else %}
+                            <span style="color:var(--text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--text-muted); font-size:0.85rem;">
+                        {{ student.phone or student.email or '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- No results row (hidden by default) -->
+        <div id="noResults" style="display:none; padding: 3rem; text-align:center; color:var(--text-muted);">
+            No students match your search.
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <p>No students enrolled in this course yet.</p>
+            <a href="{{ url_for('enrollment_page', course_id=course.id) }}" class="manage-link">
+                Manage Enrollment
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterStudents() {
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#studentsBody .student-row');
+        let visible = 0;
+
+        rows.forEach(row => {
+            const name   = row.dataset.name   || '';
+            const id     = row.dataset.id     || '';
+            const stream = row.dataset.stream || '';
+            const match  = !q || name.includes(q) || id.includes(q) || stream.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+
+        document.getElementById('visibleCount').textContent =
+            visible + ' Student' + (visible !== 1 ? 's' : '');
+        document.getElementById('noResults').style.display =
+            visible === 0 ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

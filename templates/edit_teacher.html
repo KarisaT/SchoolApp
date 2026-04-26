@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}Edit Teacher – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Typography & Header */
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    /* Centered Layout Container */
+    .edit-container { max-width: 850px; margin: 0 auto; padding-bottom: 4rem; }
+    
+    .card-panel { 
+        background: white; 
+        border-radius: 16px; 
+        padding: 2.5rem; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04); 
+        border: 1px solid #f0f0f0;
+    }
+
+    /* Profile Header Styling */
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 2.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .avatar-circle {
+        width: 100px;
+        height: 100px;
+        background: #fdf6e4;
+        color: #b87a10;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        font-weight: 700;
+        border: 4px solid #fff;
+        box-shadow: 0 0 0 1px #eee;
+        overflow: hidden;
+    }
+    .avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .profile-info h3 { margin: 0; font-size: 1.5rem; color: var(--text-dark); }
+    .profile-info p { margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+    .badge-role { 
+        display: inline-block; 
+        margin-top: 8px; 
+        padding: 4px 12px; 
+        background: #f0f4ff; 
+        color: #2e5b8a; 
+        border-radius: 20px; 
+        font-size: 0.75rem; 
+        font-weight: 600; 
+    }
+
+    /* Form Grid */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    .full-width { grid-column: span 2; }
+
+    .form-label { 
+        display: block; 
+        font-size: 0.82rem; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        letter-spacing: 0.03em;
+        color: var(--text-muted); 
+        margin-bottom: 8px; 
+    }
+    .field-input { 
+        width: 100%; 
+        padding: 12px 14px; 
+        border: 1px solid #e2e8f0; 
+        border-radius: 10px; 
+        font-size: 0.95rem; 
+        transition: 0.2s;
+        background-color: #fafafa;
+    }
+    .field-input:focus { 
+        background-color: #fff;
+        border-color: var(--accent); 
+        outline: none; 
+        box-shadow: 0 0 0 4px rgba(46, 91, 138, 0.08); 
+    }
+
+    .form-actions { 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 12px; 
+        margin-top: 2rem; 
+        padding-top: 2rem;
+        border-top: 1px solid #f5f5f5;
+    }
+    .btn-cancel { 
+        padding: 12px 24px; 
+        color: #64748b; 
+        text-decoration: none; 
+        font-weight: 600; 
+        font-size: 0.9rem; 
+        display: flex;
+        align-items: center;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .status-active    { background: #dcfce7; color: #166534; }
+    .status-on-leave  { background: #fef9c3; color: #854d0e; }
+    .status-inactive  { background: #fee2e2; color: #991b1b; }
+
+    @media (max-width: 600px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .full-width { grid-column: span 1; }
+        .profile-header { flex-direction: column; text-align: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
+        <a href="{{ url_for('teachers_page') }}" style="text-decoration:none; color:var(--text-muted); font-size:0.9rem;">← Back to Faculty</a>
+        <h1 class="page-title">Edit Teacher <em>Profile</em></h1>
+    </div>
+
+    <div class="card-panel">
+        <div class="profile-header">
+            <div class="avatar-circle" id="avatarCircle">
+                <span id="avatarInitials">
+                    {% set parts = teacher.name.split(' ') %}
+                    {{ parts[0][0] }}{{ parts[-1][0] if parts|length > 1 else '' }}
+                </span>
+            </div>
+            <div class="profile-info">
+                <h3 id="displayName">{{ teacher.name }}</h3>
+                <span class="badge-role" id="displayRole">{{ teacher.subject or 'Faculty Member' }}</span>
+                <p>Staff Reference: <strong>#TR-{{ teacher.id }}</strong></p>
+                <p style="margin-top:8px;">
+                    <span id="statusBadge" class="status-badge status-{{ teacher.status|lower|replace(' ','-') }}">{{ teacher.status }}</span>
+                </p>
+            </div>
+        </div>
+
+        <form method="POST" id="editTeacherForm" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label" for="nameField">Full Name *</label>
+                    <input type="text" name="name" id="nameField" class="field-input" 
+                           value="{{ teacher.name }}" oninput="syncDisplay()" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="subjectField">Primary Subject</label>
+                    <select name="subject" id="subjectField" class="field-input" onchange="syncSubject()">
+                        <option value="" {% if not teacher.subject %}selected{% endif %}>-- Select Course --</option>
+                        {% for course in courses %}
+                            <option value="{{ course.title }}" {% if teacher.subject == course.title %}selected{% endif %}>
+                                {{ course.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="statusField">Employment Status</label>
+                    <select name="status" id="statusField" class="field-input" onchange="syncStatus()">
+                        <option value="Active"   {% if teacher.status == 'Active'   %}selected{% endif %}>✅ Active</option>
+                        <option value="On Leave" {% if teacher.status == 'On Leave' %}selected{% endif %}>🟡 On Leave</option>
+                        <option value="Inactive" {% if teacher.status == 'Inactive' %}selected{% endif %}>⛔ Inactive</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="emailField">Email Address</label>
+                    <input type="email" name="email" id="emailField" class="field-input" 
+                           value="{{ teacher.email or '' }}" placeholder="teacher@school.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="phoneField">Contact Number</label>
+                    <input type="tel" name="phone" id="phoneField" class="field-input" 
+                           value="{{ teacher.phone or '' }}" placeholder="e.g. 0712 345 678">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="qualField">Qualification</label>
+                    <input type="text" name="qualification" id="qualField" class="field-input"
+                           value="{{ teacher.qualification or '' }}" placeholder="e.g. B.Ed, M.Sc">
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label" for="bioField">Bio / Notes</label>
+                    <textarea name="bio" id="bioField" class="field-input" rows="3"
+                              placeholder="Short bio or additional notes...">{{ teacher.bio or '' }}</textarea>
+                </div>
+
+
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('teachers_page') }}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-primary-custom" style="padding: 12px 30px;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="margin-right:8px; vertical-align:middle;">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    Save Faculty Updates
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function syncDisplay() {
+    const name = document.getElementById('nameField').value.trim() || 'Teacher Name';
+    document.getElementById('displayName').textContent = name;
+    
+    const parts = name.split(' ').filter(Boolean);
+    let ini = "?";
+    if (parts.length >= 2) {
+        ini = parts[0][0] + parts[parts.length - 1][0];
+    } else if (parts.length === 1) {
+        ini = parts[0].slice(0, 2);
+    }
+    const initEl = document.getElementById('avatarInitials');
+    if (initEl) initEl.textContent = ini.toUpperCase();
+}
+
+function syncSubject() {
+    const subjectSelect = document.getElementById('subjectField');
+    const selectedText = subjectSelect.options[subjectSelect.selectedIndex].text;
+    const displayRole = document.getElementById('displayRole');
+    
+    if (subjectSelect.value === "") {
+        displayRole.textContent = 'Faculty Member';
+    } else {
+        displayRole.textContent = selectedText;
+    }
+}
+
+function syncStatus() {
+    const sel = document.getElementById('statusField');
+    const val = sel.value;
+    const badge = document.getElementById('statusBadge');
+    if (badge) {
+        badge.textContent = val;
+        badge.className = 'status-badge status-' + val.toLowerCase().replace(' ', '-');
+    }
+}
+
+function loadPhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const circle = document.getElementById('avatarCircle');
+        circle.innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
+    };
+    reader.readAsDataURL(file);
+}
+</script>
+{% endblock %}

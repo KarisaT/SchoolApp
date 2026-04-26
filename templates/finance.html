@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Finance – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+  /* ── Stats row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 22px 22px 18px; position: relative; overflow: hidden; }
+  .stat-pill { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 14px; }
+  .stat-pill svg { width: 20px; height: 20px; }
+  .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .stat-value { font-family: 'Fraunces', serif; font-size: 1.7rem; font-weight: 600; letter-spacing: -0.5px; line-height: 1; color: var(--text); }
+  .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+  .stat-accent-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; border-radius: 0 0 var(--radius) var(--radius); }
+
+  /* ── Card sub-components ── */
+  .card-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .card-head h3 { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th { padding: 10px 22px; text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); background: var(--bg); }
+  .data-table td { padding: 12px 22px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg); }
+
+  /* ── Missing badge ── */
+  .badge-coral { background: var(--coral-bg); color: #C04A35; }
+
+  @media (max-width: 768px) {
+    .stats-row { grid-template-columns: 1fr 1fr !important; gap: 12px; }
+  }
+  @media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr !important; }
+  }
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Finance &amp; <em>Fees</em></h1>
+    <p class="page-subtitle">Overview of student balances and payment history</p>
+  </div>
+  <a href="{{ url_for('mpesa_dashboard') }}" class="btn btn-primary">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+    M-Pesa Dashboard
+  </a>
+</div>
+
+<!-- Stats Row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-pill" style="background:var(--sky);">
+      <svg fill="none" viewBox="0 0 24 24" stroke="#2563EB" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    </div>
+    <div class="stat-label">Total Expected</div>
+    <div class="stat-value">KES {{ "{:,.0f}".format(stats.total_expected) }}</div>
+    <div class="stat-sub">Current academic year</div>
+    <div class="stat-accent-bar" style="background:#2563EB;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-pill" style="background:var(--green);">
+      <svg fill="none" viewBox="0 0 24 24" stroke="#15803D" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="stat-label">Total Collected</div>
+    <div class="stat-value" style="color:#15803D;">KES {{ "{:,.0f}".format(stats.total_collected) }}</div>
+    <div class="stat-sub">{{ ((stats.total_collected / stats.total_expected * 100) | round(1)) if stats.total_expected > 0 else 0 }}% collection rate</div>
+    <div class="stat-accent-bar" style="background:#15803D;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-pill" style="background:var(--coral-bg);">
+      <svg fill="none" viewBox="0 0 24 24" stroke="#E8614A" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="stat-label">Outstanding Balance</div>
+    <div class="stat-value" style="color:#C04A35;">KES {{ "{:,.0f}".format(stats.total_balance) }}</div>
+    <div class="stat-sub">From {{ students|length }} students</div>
+    <div class="stat-accent-bar" style="background:var(--coral);"></div>
+  </div>
+</div>
+
+<!-- Fee Statements Table -->
+<div class="card">
+  <div class="card-head">
+    <h3>Student Fee Statements</h3>
+    <input type="text" id="financeSearch" class="form-control" style="width:240px; padding:7px 12px;" placeholder="Search name or ID…" onkeyup="filterFinance()">
+  </div>
+  <div class="table-wrap">
+    <table class="data-table" id="financeTable">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>ID Number</th>
+          <th>Expected</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student, total_fees, paid, balance in finance_data %}
+        <tr>
+          <td><strong>{{ student.name }}</strong></td>
+          <td style="color:var(--muted);">{{ student.id_number }}</td>
+          <td>KES {{ "{:,.0f}".format(total_fees) }}</td>
+          <td style="color:#15803D; font-weight:500;">KES {{ "{:,.0f}".format(paid) }}</td>
+          <td style="font-weight:600; color:{% if balance <= 0 %}#15803D{% else %}#C04A35{% endif %};">
+            KES {{ "{:,.0f}".format(balance) }}
+          </td>
+          <td>
+            {% if balance <= 0 %}
+              <span class="badge badge-green">Cleared</span>
+            {% elif paid > 0 %}
+              <span class="badge badge-amber">Partial</span>
+            {% else %}
+              <span class="badge badge-coral">Unpaid</span>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap;">
+            <a href="{{ url_for('student_finance', student_id=student.id) }}" class="btn btn-secondary btn-sm">View</a>
+            {% if balance > 0 %}
+            <a href="/mpesa/pay?student_id={{ student.id }}" class="btn btn-success btn-sm" style="margin-left:4px;">📱 Pay</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not finance_data %}
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px;">No finance records found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterFinance() {
+  const q = document.getElementById('financeSearch').value.toLowerCase();
+  document.querySelectorAll('#financeTable tbody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

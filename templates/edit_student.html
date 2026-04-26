@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Edit Student – SchoolApp{% endblock %}
+
+{% block extra_styles %}
+<style>
+    /* Branding & Typography */
+    .page-title { font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 300; margin-bottom: 8px; }
+    .page-title em { font-style: italic; color: var(--amber); }
+
+    /* Centered Layout Container */
+    .edit-container { max-width: 850px; margin: 0 auto; padding-bottom: 4rem; }
+    
+    .card-panel { 
+        background: white; 
+        border-radius: 16px; 
+        padding: 2.5rem; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04); 
+        border: 1px solid #f0f0f0;
+    }
+
+    /* Profile Header in Form */
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 2.5rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #f5f5f5;
+    }
+    .avatar-circle {
+        width: 90px;
+        height: 90px;
+        background: #f0f4ff;
+        color: #2e5b8a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 700;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 1px #eee;
+    }
+    .profile-info h3 { margin: 0; font-size: 1.4rem; color: var(--text-dark); }
+    .profile-info p { margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Form Grid */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    .full-width { grid-column: span 2; }
+
+    .form-label { 
+        display: block; 
+        font-size: 0.82rem; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        letter-spacing: 0.03em;
+        color: var(--text-muted); 
+        margin-bottom: 8px; 
+    }
+    .field-input, .form-select { 
+        width: 100%; 
+        padding: 12px 14px; 
+        border: 1px solid #e2e8f0; 
+        border-radius: 10px; 
+        font-size: 0.95rem; 
+        transition: 0.2s;
+        background-color: #fafafa;
+    }
+    .field-input:focus { 
+        background-color: #fff;
+        border-color: var(--accent); 
+        outline: none; 
+        box-shadow: 0 0 0 4px rgba(46, 91, 138, 0.08); 
+    }
+    .field-readonly { background-color: #f1f5f9; cursor: not-allowed; color: #64748b; }
+
+    /* Bottom Actions */
+    .form-actions { 
+        display: flex; 
+        justify-content: flex-end; 
+        gap: 12px; 
+        margin-top: 2.5rem; 
+        padding-top: 2rem;
+        border-top: 1px solid #f5f5f5;
+    }
+    .btn-cancel { 
+        padding: 12px 24px; 
+        color: #64748b; 
+        text-decoration: none; 
+        font-weight: 600; 
+        font-size: 0.9rem; 
+    }
+
+    @media (max-width: 600px) {
+        .form-grid { grid-template-columns: 1fr; }
+        .full-width { grid-column: span 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
+        <a href="{{ url_for('students_page') }}" style="text-decoration:none; color:var(--text-muted); font-size:0.9rem;">← Back to Students</a>
+        <h1 class="page-title">Edit Student <em>Profile</em></h1>
+    </div>
+
+    <div class="card-panel">
+        <form method="POST">
+            <div class="profile-header">
+                <div class="avatar-circle" id="initialsCircle">
+                    {{ student.first_name[0] }}{{ student.surname[0] }}
+                </div>
+                <div class="profile-info">
+                    <h3 id="display_name">{{ student.first_name }} {{ student.surname }}</h3>
+                    <p>Editing System ID: <strong>#{{ student.id }}</strong></p>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" name="first_name" class="field-input" value="{{ student.first_name }}" oninput="updateUI()" id="f_name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Surname</label>
+                    <input type="text" name="surname" class="field-input" value="{{ student.surname }}" oninput="updateUI()" id="s_name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Class / Stream</label>
+                    <select name="stream" class="form-select">
+                        <option value="Form 1" {% if student.stream == 'Form 1' %}selected{% endif %}>Form 1</option>
+                        <option value="Form 2" {% if student.stream == 'Form 2' %}selected{% endif %}>Form 2</option>
+                        <option value="Form 3" {% if student.stream == 'Form 3' %}selected{% endif %}>Form 3</option>
+                        <option value="Form 4" {% if student.stream == 'Form 4' %}selected{% endif %}>Form 4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Student ID Number</label>
+                    <input type="text" class="field-input field-readonly" value="{{ student.id_number }}" readonly>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">ID numbers are managed by the registrar.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="field-input" value="{{ student.email or '' }}" placeholder="student@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input type="text" name="phone" class="field-input" value="{{ student.phone or '' }}" placeholder="e.g. +254 700 000 000">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Parent/Guardian</label>
+                    <input type="text" name="guardian" class="field-input" value="{{ student.guardian or '' }}" placeholder="Guardian name and contact">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Notes</label>
+                    <textarea name="notes" class="field-input" rows="3" placeholder="Any additional notes...">{{ student.notes or '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="{{ url_for('students_page') }}" class="btn-cancel">Discard Changes</a>
+                <button type="submit" class="btn-primary-custom" style="padding: 12px 30px;">
+                    Save Profile Update
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateUI() {
+        const fn = document.getElementById('f_name').value.trim();
+        const sn = document.getElementById('s_name').value.trim();
+        
+        // Update Title
+        document.getElementById('display_name').innerText = (fn + " " + sn) || "New Student";
+        
+        // Update Avatar Initials
+        const initials = (fn.charAt(0) + sn.charAt(0)).toUpperCase();
+        document.getElementById('initialsCircle').innerText = initials || "?";
+    }
+</script>
+{% endblock %}
