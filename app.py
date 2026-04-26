@@ -603,12 +603,18 @@ def students_page():
         'balance': total_fees - paid_map.get(s.id, 0)
     } for s in students}
     first_fee = fees[0] if fees else None
+    # Portal accounts data (admin only — passed as empty list for non-admins)
+    if session.get("role") == "Admin":
+        portal_students = Student.query.filter_by(status="Active").order_by(Student.surname).all()
+    else:
+        portal_students = []
     return render_template("students.html",
         students=students,
         courses=Course.query.all(),
         fee_info=fee_info,
         first_fee=first_fee,
-        today=date.today().isoformat()
+        today=date.today().isoformat(),
+        portal_students=portal_students,
     )
 
 
@@ -1716,7 +1722,7 @@ def student_portal_accounts():
 def create_student_portal(student_id):
     student = Student.query.get_or_404(student_id)
     if student.portal_user:
-        return redirect(url_for("student_portal_accounts"))
+        return redirect(url_for("students_page") + "#tab-portal")
     username = request.form.get("username", student.id_number).strip()
     password = request.form.get("password", "").strip()
     if not password:
@@ -1725,7 +1731,7 @@ def create_student_portal(student_id):
     pu.set_password(password)
     db.session.add(pu)
     db.session.commit()
-    return redirect(url_for("student_portal_accounts"))
+    return redirect(url_for("students_page") + "#tab-portal")
 
 
 @app.route("/students/<int:student_id>/reset-portal-password", methods=["POST"])
@@ -1738,7 +1744,7 @@ def reset_student_portal_password(student_id):
     if new_pw:
         pu.set_password(new_pw)
         db.session.commit()
-    return redirect(url_for("student_portal_accounts"))
+    return redirect(url_for("students_page") + "#tab-portal")
 
 
 @app.route("/students/<int:student_id>/delete-portal", methods=["POST"])
@@ -1750,7 +1756,7 @@ def delete_student_portal(student_id):
     if pu:
         db.session.delete(pu)
         db.session.commit()
-    return redirect(url_for("student_portal_accounts"))
+    return redirect(url_for("students_page") + "#tab-portal")
 
 
 # ── ID Card ───────────────────────────────────
