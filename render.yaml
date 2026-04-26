@@ -3,7 +3,38 @@ services:
     name: schoolapp
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python migrate.py && gunicorn app:app
+    startCommand: python -c "
+      import os, time, psycopg2
+      url = os.environ['DATABASE_URL']
+      url = url.replace('postgres://', 'postgresql://', 1)
+      for i in range(10):
+          try:
+              conn = psycopg2.connect(url)
+              break
+          except Exception as e:
+              print(f'DB not ready ({i+1}/10):', e)
+              time.sleep(3)
+      conn.autocommit = True
+      cur = conn.cursor()
+      sqls = [
+          'ALTER TABLE student ADD COLUMN IF NOT EXISTS photo TEXT',
+          'ALTER TABLE student ADD COLUMN IF NOT EXISTS fee_balance FLOAT NOT NULL DEFAULT 0.0',
+          'ALTER TABLE student ADD COLUMN IF NOT EXISTS notes TEXT',
+          'ALTER TABLE course ADD COLUMN IF NOT EXISTS course_code VARCHAR(20)',
+          \"ALTER TABLE course ADD COLUMN IF NOT EXISTS session_type VARCHAR(20) NOT NULL DEFAULT 'session'\",
+          'ALTER TABLE course ADD COLUMN IF NOT EXISTS start_date DATE',
+          'ALTER TABLE course ADD COLUMN IF NOT EXISTS subject_group VARCHAR(50)',
+          \"ALTER TABLE exam ADD COLUMN IF NOT EXISTS term VARCHAR(20) NOT NULL DEFAULT 'Term 1'\",
+      ]
+      for sql in sqls:
+          try:
+              cur.execute(sql)
+              print('OK:', sql[:50])
+          except Exception as e:
+              print('SKIP:', e)
+      conn.close()
+      print('Migrations done.')
+      " && gunicorn app:app
     envVars:
       - key: SECRET_KEY
         generateValue: true
