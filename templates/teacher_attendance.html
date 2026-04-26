@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Teacher Attendance – SchoolApp{% endblock %}
+{% block title %}{% if is_admin %}Teacher Attendance{% else %}My Attendance{% endif %} – SchoolApp{% endblock %}
 
 {% block extra_styles %}
 <style>
@@ -16,6 +16,7 @@
   .btn-ghost { background:none; border-color:var(--border); color:var(--muted); }
   .btn-ghost:hover { border-color:var(--coral); color:var(--coral); }
   .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+  .stats-row-self { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
   .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
   .stat-val { font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; line-height:1; margin-bottom:4px; }
   .stat-lbl { font-size:0.72rem; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); font-weight:600; }
@@ -53,15 +54,49 @@
   .status-Absent  { background:#FEE2E2; color:#B91C1C; }
   .status-Late    { background:#FEF3C7; color:#92400E; }
   .status-On\.Leave { background:#DBEAFE; color:#1E40AF; }
-  @media(max-width:700px) { .stats-row { grid-template-columns:repeat(2,1fr); } }
+
+  /* Self-attendance card (teacher view) */
+  .self-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px 32px; margin-bottom:20px; }
+  .self-card-head { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+  .self-avatar { width:52px; height:52px; border-radius:50%; background:var(--coral-bg,#FDF0ED); color:var(--coral,#e05c3a); display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem; flex-shrink:0; }
+  .self-name { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:600; }
+  .self-subject { font-size:0.8rem; color:var(--muted); margin-top:2px; }
+  .self-status-section label.section-label { display:block; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:10px; }
+  .self-toggle-group { display:inline-flex; background:var(--bg); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .self-toggle-group input[type="radio"] { display:none; }
+  .self-toggle-group label {
+    padding:10px 20px; font-size:0.85rem; font-weight:600; cursor:pointer;
+    color:var(--muted); border-right:1px solid var(--border); transition:all .15s; white-space:nowrap;
+  }
+  .self-toggle-group label:last-of-type { border-right:none; }
+  .self-toggle-group input[value="Present"]:checked + label { color:#15803D; background:#F0FDF4; }
+  .self-toggle-group input[value="Absent"]:checked  + label { color:#B91C1C; background:#FEF2F2; }
+  .self-toggle-group input[value="Late"]:checked    + label { color:#92400E; background:#FFFBEB; }
+  .self-toggle-group input[value="On Leave"]:checked + label { color:#1E40AF; background:#EFF6FF; }
+  .self-notes { margin-top:18px; }
+  .self-notes label { display:block; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin-bottom:8px; }
+  .self-notes input { width:100%; max-width:420px; padding:9px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:0.875rem; color:var(--text); background:var(--surface); outline:none; }
+  .self-notes input:focus { border-color:var(--coral); }
+  .self-actions { margin-top:22px; display:flex; align-items:center; gap:12px; }
+  .already-marked-notice { display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; color:var(--muted); }
+
+  @media(max-width:700px) {
+    .stats-row, .stats-row-self { grid-template-columns:repeat(2,1fr); }
+    .self-toggle-group label { padding:8px 12px; font-size:0.78rem; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <div class="page-title">Teacher Attendance</div>
-    <div class="page-sub">Track daily teacher presence and monthly trends</div>
+    {% if is_admin %}
+      <div class="page-title">Teacher Attendance</div>
+      <div class="page-sub">Track daily teacher presence and monthly trends</div>
+    {% else %}
+      <div class="page-title">My Attendance</div>
+      <div class="page-sub">Mark and view your own attendance record</div>
+    {% endif %}
   </div>
 </div>
 
@@ -81,11 +116,15 @@
   </span>
 </div>
 
-<!-- Stats -->
+
+{# ══════════════════════════════════════════════════════════
+   ADMIN VIEW — full table of all teachers
+   ══════════════════════════════════════════════════════════ #}
+{% if is_admin %}
+
 {% set present_n = records.values() | selectattr('status','equalto','Present') | list | length %}
 {% set absent_n  = records.values() | selectattr('status','equalto','Absent')  | list | length %}
 {% set late_n    = records.values() | selectattr('status','equalto','Late')    | list | length %}
-{% set leave_n   = records.values() | selectattr('status','equalto','On Leave')| list | length %}
 {% set marked_n  = records|length %}
 <div class="stats-row">
   <div class="stat-card">
@@ -106,7 +145,6 @@
   </div>
 </div>
 
-<!-- Attendance form -->
 <div class="card">
   <div class="card-head">
     <h3>Mark Attendance – {{ sel_date.strftime('%d %b %Y') }}</h3>
@@ -181,4 +219,101 @@
     </div>
   </form>
 </div>
+
+
+{# ══════════════════════════════════════════════════════════
+   TEACHER VIEW — self-attendance card
+   ══════════════════════════════════════════════════════════ #}
+{% else %}
+
+{% if teachers %}
+{% set t = teachers[0] %}
+{% set rec = records.get(t.id) %}
+{% set cur = rec.status if rec else 'Present' %}
+{% set stats = teacher_stats.get(t.id, {}) %}
+
+<!-- Monthly summary strip -->
+<div class="stats-row-self" style="margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-val" style="color:#15803D;">{{ stats.present or 0 }}</div>
+    <div class="stat-lbl">Days Present (this month)</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-val" style="color:var(--muted);">{{ stats.total or 0 }}</div>
+    <div class="stat-lbl">Days Marked</div>
+  </div>
+  <div class="stat-card">
+    {% if stats.get('rate') is not none %}
+      <div class="stat-val" style="color:{% if stats.rate >= 80 %}#15803D{% elif stats.rate >= 60 %}#92400E{% else %}#B91C1C{% endif %};">
+        {{ stats.rate }}%
+      </div>
+    {% else %}
+      <div class="stat-val" style="color:var(--muted);">—</div>
+    {% endif %}
+    <div class="stat-lbl">Attendance Rate</div>
+  </div>
+</div>
+
+<!-- Self-mark card -->
+<div class="self-card">
+  <div class="self-card-head">
+    <div class="self-avatar">
+      {{ t.name.split()[0][0] }}{{ t.name.split()[-1][0] if t.name.split()|length > 1 else '' }}
+    </div>
+    <div>
+      <div class="self-name">{{ t.name }}</div>
+      <div class="self-subject">{{ t.subject }} · {{ t.email }}</div>
+    </div>
+    {% if rec %}
+      <span class="saved-badge status-{{ rec.status|replace(' ','_') }}" style="margin-left:auto;">
+        ✓ Already marked: {{ rec.status }}
+      </span>
+    {% endif %}
+  </div>
+
+  <form method="POST" action="{{ url_for('mark_teacher_attendance') }}" id="self-att-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="date" value="{{ sel_date.isoformat() }}">
+    <input type="hidden" name="teacher_ids" value="{{ t.id }}">
+
+    <div class="self-status-section">
+      <label class="section-label">Status for {{ sel_date.strftime('%d %b %Y') }}</label>
+      <div class="self-toggle-group">
+        {% for s in ['Present', 'Late', 'Absent', 'On Leave'] %}
+        <input type="radio" name="status_{{ t.id }}" value="{{ s }}"
+               id="self_s_{{ loop.index }}" {{ 'checked' if cur == s else '' }}>
+        <label for="self_s_{{ loop.index }}">{{ s }}</label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="self-notes">
+      <label for="self-notes">Note <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+      <input type="text" id="self-notes" name="notes_{{ t.id }}"
+             value="{{ rec.notes or '' }}" placeholder="e.g. Arrived after morning meeting…">
+    </div>
+
+    <div class="self-actions">
+      <button type="submit" class="btn btn-primary" form="self-att-form">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        {% if rec %}Update Attendance{% else %}Save Attendance{% endif %}
+      </button>
+      {% if rec %}
+        <span class="already-marked-notice">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Last saved: {{ rec.status }}{% if rec.notes %} — "{{ rec.notes }}"{% endif %}
+        </span>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% else %}
+<div class="card" style="padding:48px;text-align:center;color:var(--muted);">
+  <p style="font-size:1rem;margin-bottom:8px;">No teacher profile linked to your account.</p>
+  <p style="font-size:0.82rem;">Please ask an administrator to link your login to a teacher profile.</p>
+</div>
+{% endif %}
+
+{% endif %}
 {% endblock %}

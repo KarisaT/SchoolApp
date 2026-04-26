@@ -1778,7 +1778,7 @@ def bulk_id_cards():
 # ── Teacher Attendance ────────────────────────
 @app.route("/teacher-attendance")
 @login_required
-@admin_required
+@roles_required("Admin", "Teacher")
 def teacher_attendance_page():
     date_str  = request.args.get("date", date.today().isoformat())
     try:
@@ -1786,36 +1786,69 @@ def teacher_attendance_page():
     except ValueError:
         sel_date = date.today()
 
-    teachers = Teacher.query.filter_by(status="Active").order_by(Teacher.name).all()
-    records  = {r.teacher_id: r for r in TeacherAttendance.query.filter_by(date=sel_date).all()}
+    role = session.get("role")
+    is_admin = role == "Admin"
 
-    # Summary stats for the month
-    month_start = sel_date.replace(day=1)
-    monthly = TeacherAttendance.query.filter(
-        TeacherAttendance.date >= month_start,
-        TeacherAttendance.date <= sel_date,
-    ).all()
+    if is_admin:
+        # Admin sees all active teachers
+        teachers = Teacher.query.filter_by(status="Active").order_by(Teacher.name).all()
+        records  = {r.teacher_id: r for r in TeacherAttendance.query.filter_by(date=sel_date).all()}
 
-    teacher_stats = {}
-    for t in teachers:
-        t_recs = [r for r in monthly if r.teacher_id == t.id]
-        present = sum(1 for r in t_recs if r.status == "Present")
-        teacher_stats[t.id] = {
-            "present": present, "total": len(t_recs),
-            "rate": round(present / len(t_recs) * 100) if t_recs else None,
-        }
+        # Summary stats for the month
+        month_start = sel_date.replace(day=1)
+        monthly = TeacherAttendance.query.filter(
+            TeacherAttendance.date >= month_start,
+            TeacherAttendance.date <= sel_date,
+        ).all()
+
+        teacher_stats = {}
+        for t in teachers:
+            t_recs = [r for r in monthly if r.teacher_id == t.id]
+            present = sum(1 for r in t_recs if r.status == "Present")
+            teacher_stats[t.id] = {
+                "present": present, "total": len(t_recs),
+                "rate": round(present / len(t_recs) * 100) if t_recs else None,
+            }
+    else:
+        # Teacher sees only their own record
+        app_user = AppUser.query.get(session.get("user_id"))
+        if not app_user or not app_user.teacher_id:
+            flash("Your account is not linked to a teacher profile. Please contact the administrator.", "warning")
+            return redirect(url_for("dashboard"))
+
+        my_teacher = Teacher.query.get(app_user.teacher_id)
+        teachers = [my_teacher] if my_teacher else []
+        records  = {r.teacher_id: r for r in TeacherAttendance.query.filter_by(
+            teacher_id=app_user.teacher_id, date=sel_date).all()}
+
+        # Monthly stats just for this teacher
+        month_start = sel_date.replace(day=1)
+        monthly = TeacherAttendance.query.filter(
+            TeacherAttendance.teacher_id == app_user.teacher_id,
+            TeacherAttendance.date >= month_start,
+            TeacherAttendance.date <= sel_date,
+        ).all()
+
+        teacher_stats = {}
+        if my_teacher:
+            present = sum(1 for r in monthly if r.status == "Present")
+            teacher_stats[my_teacher.id] = {
+                "present": present, "total": len(monthly),
+                "rate": round(present / len(monthly) * 100) if monthly else None,
+            }
 
     return render_template(
         "teacher_attendance.html",
         teachers=teachers, records=records,
         sel_date=sel_date, today=date.today(),
         teacher_stats=teacher_stats,
+        is_admin=is_admin,
     )
 
 
 @app.route("/teacher-attendance/mark", methods=["POST"])
 @login_required
-@admin_required
+@roles_required("Admin", "Teacher")
 @csrf_protect
 def mark_teacher_attendance():
     date_str = request.form.get("date", date.today().isoformat())
@@ -1824,7 +1857,22 @@ def mark_teacher_attendance():
     except ValueError:
         att_date = date.today()
 
-    teacher_ids = request.form.getlist("teacher_ids")
+    role = session.get("role")
+    is_admin = role == "Admin"
+
+    if is_admin:
+        # Admin can mark any teacher
+        teacher_ids = request.form.getlist("teacher_ids")
+    else:
+        # Teacher can only mark themselves
+        app_user = AppUser.query.get(session.get("user_id"))
+        if not app_user or not app_user.teacher_id:
+            flash("Your account is not linked to a teacher profile.", "warning")
+            return redirect(url_for("dashboard"))
+        submitted_ids = request.form.getlist("teacher_ids")
+        # Security: only allow the teacher's own ID even if form is tampered
+        teacher_ids = [str(app_user.teacher_id)] if str(app_user.teacher_id) in submitted_ids else []
+
     for tid in teacher_ids:
         status = request.form.get(f"status_{tid}", "Absent")
         notes  = request.form.get(f"notes_{tid}", "")
