@@ -1776,6 +1776,7 @@ def bulk_id_cards():
 # ── Teacher Attendance ────────────────────────
 @app.route("/teacher-attendance")
 @login_required
+@admin_required
 def teacher_attendance_page():
     date_str  = request.args.get("date", date.today().isoformat())
     try:
@@ -1812,7 +1813,7 @@ def teacher_attendance_page():
 
 @app.route("/teacher-attendance/mark", methods=["POST"])
 @login_required
-@roles_required("Admin", "Teacher")
+@admin_required
 @csrf_protect
 def mark_teacher_attendance():
     date_str = request.form.get("date", date.today().isoformat())
