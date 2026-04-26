@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from functools import wraps
 import os
 import random
@@ -551,6 +551,7 @@ def dashboard():
         total_expected=total_expected, total_collected=total_collected,
         fee_rate=fee_rate, announcements=announcements,
         today_rate=today_rate, today_present=today_present, today_total=today_total,
+        now=datetime.now(),
     )
 
 

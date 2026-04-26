@@ -162,10 +162,32 @@
 {% endblock %}
 
 {% block content %}
+{# ── Time-of-day greeting ── #}
+{% set hour = now.hour if now is defined else 12 %}
+{% if hour < 12 %}
+  {% set greeting = "Good morning" %}
+{% elif hour < 17 %}
+  {% set greeting = "Good afternoon" %}
+{% else %}
+  {% set greeting = "Good evening" %}
+{% endif %}
+
+{# ── Role display label ── #}
+{% set role = session.get('role', 'User') %}
+{% if role == 'Admin' %}
+  {% set role_label = "Administrator" %}
+{% elif role == 'Teacher' %}
+  {% set role_label = "Teacher" %}
+{% elif role == 'Bursar' %}
+  {% set role_label = "Bursar" %}
+{% else %}
+  {% set role_label = role %}
+{% endif %}
+
 <div class="page-header">
       <div>
-        <h1 class="page-title">Good morning, <em>Admin</em></h1>
-        <p class="page-date">Here's what's happening at your school today.</p>
+        <h1 class="page-title">{{ greeting }}, <em>{{ session.get('user', 'User') }}</em></h1>
+        <p class="page-date">Logged in as <strong>{{ role_label }}</strong> · Here's what's happening at your school today.</p>
       </div>
       <span class="badge-today">Live Dashboard</span>
     </div>
