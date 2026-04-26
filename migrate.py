@@ -8,6 +8,7 @@ Run once from the project root:
 
 import os
 import random
+import time
 from dotenv import load_dotenv
 import psycopg2
 
@@ -145,8 +146,26 @@ def backfill_subject_groups(conn):
     cur.close()
 
 
+def connect_with_retry(url, retries=10, delay=3):
+    """Try to connect to the database, retrying on failure.
+    Render's internal DNS can take a few seconds to become available on startup.
+    """
+    for attempt in range(1, retries + 1):
+        try:
+            print(f"Connecting to database (attempt {attempt}/{retries})...")
+            conn = psycopg2.connect(url)
+            print("  ✓ Connected successfully.")
+            return conn
+        except psycopg2.OperationalError as e:
+            print(f"  ✗ Not ready yet: {e}")
+            if attempt < retries:
+                print(f"  Retrying in {delay}s...")
+                time.sleep(delay)
+    raise RuntimeError("Could not connect to the database after multiple attempts. Check your DATABASE_URL.")
+
+
 def run():
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = connect_with_retry(DATABASE_URL)
     conn.autocommit = True
     cur = conn.cursor()
 
