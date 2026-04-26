@@ -312,6 +312,30 @@
     .nav-signout:hover { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-mid); }
     .nav-signout svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 
+    /* ── Logged-in user chip ── */
+    .user-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 4px 10px 4px 4px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface);
+      cursor: default; white-space: nowrap;
+    }
+    .user-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+    }
+    .avatar-admin   { background: #FEE2E2; color: #B91C1C; }
+    .avatar-bursar  { background: #FEF3C7; color: #92400E; }
+    .avatar-teacher { background: #DBEAFE; color: #1E40AF; }
+    .user-chip-info { display: flex; flex-direction: column; line-height: 1.2; }
+    .user-chip-name { font-size: 0.75rem; font-weight: 600; color: var(--text); }
+    .user-chip-role { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .role-admin   { color: #B91C1C; }
+    .role-bursar  { color: #92400E; }
+    .role-teacher { color: #1E40AF; }
+    body.dark-mode .user-chip { background: #222; border-color: #333; }
+    body.dark-mode .user-chip-name { color: #e2e2e2; }
+
     /* User chip */
     .nav-user-chip {
       display: inline-flex;
@@ -819,6 +843,27 @@
           <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
         </svg>
       </button>
+
+      <!-- Logged-in user chip -->
+      {% if session.get('user') %}
+      {% set role = session.get('role', 'Staff') %}
+      <div class="user-chip">
+        <div class="user-avatar
+          {%- if role == 'Admin' %} avatar-admin
+          {%- elif role == 'Bursar' %} avatar-bursar
+          {%- else %} avatar-teacher{% endif %}">
+          {{ session.get('user', '?')[0] | upper }}
+        </div>
+        <div class="user-chip-info">
+          <span class="user-chip-name">{{ session.get('user') }}</span>
+          <span class="user-chip-role
+            {%- if role == 'Admin' %} role-admin
+            {%- elif role == 'Bursar' %} role-bursar
+            {%- else %} role-teacher{% endif %}">{{ role }}</span>
+        </div>
+      </div>
+      {% endif %}
+
       <a href="{{ url_for('logout') }}" class="nav-signout">
         <svg viewBox="0 0 24 24" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         Sign out
@@ -904,6 +949,24 @@
     </a>
 
     <div class="mob-footer">
+      {% if session.get('user') %}
+      {% set role = session.get('role', 'Staff') %}
+      <div class="user-chip" style="flex:1;">
+        <div class="user-avatar
+          {%- if role == 'Admin' %} avatar-admin
+          {%- elif role == 'Bursar' %} avatar-bursar
+          {%- else %} avatar-teacher{% endif %}">
+          {{ session.get('user', '?')[0] | upper }}
+        </div>
+        <div class="user-chip-info">
+          <span class="user-chip-name">{{ session.get('user') }}</span>
+          <span class="user-chip-role
+            {%- if role == 'Admin' %} role-admin
+            {%- elif role == 'Bursar' %} role-bursar
+            {%- else %} role-teacher{% endif %}">{{ role }}</span>
+        </div>
+      </div>
+      {% endif %}
       <button class="dark-toggle" onclick="toggleDark()" aria-label="Toggle dark mode">
         <svg class="icon-moon" viewBox="0 0 24 24" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <svg class="icon-sun"  viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg>
