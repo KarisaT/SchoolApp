@@ -1568,6 +1568,92 @@ def delete_disciplinary(id):
     return redirect(url_for("disciplinary_page"))
 
 
+# ── Chatbot ───────────────────────────────────
+@app.route("/chatbot", methods=["POST"])
+@login_required
+def chatbot():
+    import json as _json
+    data = request.get_json(force=True, silent=True) or {}
+    messages = data.get("messages", [])
+    if not messages:
+        return {"error": "No messages provided"}, 400
+
+    # Build a live snapshot of school data for context
+    try:
+        student_count   = Student.query.filter_by(status="Active").count()
+        teacher_count   = Teacher.query.filter_by(status="Active").count()
+        course_count    = Course.query.count()
+        fee_debtors     = Student.query.filter(Student.fee_balance > 0).count()
+        total_owed      = db.session.query(db.func.sum(Student.fee_balance)).scalar() or 0
+        overdue_books   = BorrowRecord.query.filter(
+            BorrowRecord.return_date.is_(None),
+            BorrowRecord.due_date < date.today()
+        ).count()
+        recent_announcements = Announcement.query.order_by(
+            Announcement.pinned.desc(), Announcement.created_at.desc()
+        ).limit(3).all()
+        ann_text = "; ".join(
+            f'"{a.title}" ({a.created_at})' for a in recent_announcements
+        ) or "none"
+        upcoming_exams = Exam.query.filter(Exam.exam_date >= date.today()) \
+            .order_by(Exam.exam_date).limit(5).all()
+        exam_text = "; ".join(
+            f'{e.title} on {e.exam_date}' for e in upcoming_exams
+        ) or "none"
+    except Exception:
+        student_count = teacher_count = course_count = fee_debtors = overdue_books = "?"
+        total_owed = 0
+        ann_text = exam_text = "unavailable"
+
+    role = session.get("role", "Staff")
+    user = session.get("user", "User")
+    today_str = date.today().strftime("%A, %d %B %Y")
+
+    system_prompt = f"""You are SchoolBot, a helpful assistant built into SchoolApp — a school management system.
+Today is {today_str}. The logged-in user is {user} (role: {role}).
+
+Current school snapshot:
+- Active students: {student_count}
+- Active teachers: {teacher_count}
+- Courses: {course_count}
+- Students with fee balance: {fee_debtors} (total owed: KES {total_owed:,.2f})
+- Overdue library books: {overdue_books}
+- Recent announcements: {ann_text}
+- Upcoming exams: {exam_text}
+
+You can answer questions about the school, help navigate the system, explain features, \
+or give guidance based on the data above. For detailed records the user should use \
+the relevant pages in the app. Keep answers concise and friendly. \
+If asked something you can't answer from the data provided, say so honestly."""
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        return {"error": "ANTHROPIC_API_KEY not configured. Add it to your .env file."}, 503
+
+    try:
+        import requests as _req
+        resp = _req.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 512,
+                "system": system_prompt,
+                "messages": messages,
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        reply = resp.json()["content"][0]["text"]
+        return {"reply": reply}
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+
 # ── DB Init ───────────────────────────────────
 def init_db():
     with app.app_context():
