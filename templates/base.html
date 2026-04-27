@@ -695,6 +695,45 @@
         </a>
       </li>
 
+      <!-- People -->
+      <li class="nav-item" id="dd-people">
+        <button class="nav-pill {{ 'active' if request.endpoint in ['students_page','edit_student','student_report','student_finance','teachers_page','edit_teacher','view_teacher','users_page'] }}"
+                onclick="toggleDd('dd-people')">
+          <svg viewBox="0 0 24 24" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          People
+          <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="dropdown">
+          <a href="{{ url_for('students_page') }}"
+             class="dd-item {{ 'active' if request.endpoint in ['students_page','edit_student','student_report','student_finance'] }}">
+            <svg viewBox="0 0 24 24" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            Students
+          </a>
+          <a href="{{ url_for('teachers_page') }}"
+             class="dd-item {{ 'active' if request.endpoint in ['teachers_page','edit_teacher','view_teacher'] }}">
+            <svg viewBox="0 0 24 24" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Teachers
+          </a>
+          {% if session.get('role') == 'Admin' or not session.get('role') %}
+          <a href="{{ url_for('users_page') }}"
+             class="dd-item {{ 'active' if request.endpoint == 'users_page' }}">
+            <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>
+            Users
+          </a>
+          <a href="{{ url_for('student_portal_accounts') }}"
+             class="dd-item {{ 'active' if request.endpoint == 'student_portal_accounts' }}">
+            <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+            Student Portal Accounts
+          </a>
+          {% endif %}
+        </div>
+      </li>
+
       <!-- Curriculum -->
       <li class="nav-item" id="dd-curriculum">
         <button class="nav-pill {{ 'active' if request.endpoint in ['courses_page','edit_course','enrollment_page','timetable_page','library_page'] }}"
@@ -757,45 +796,6 @@
             <svg viewBox="0 0 24 24" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Disciplinary
           </a>
-        </div>
-      </li>
-
-      <!-- People -->
-      <li class="nav-item" id="dd-people">
-        <button class="nav-pill {{ 'active' if request.endpoint in ['students_page','edit_student','student_report','student_finance','teachers_page','edit_teacher','view_teacher','users_page'] }}"
-                onclick="toggleDd('dd-people')">
-          <svg viewBox="0 0 24 24" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          People
-          <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="dropdown">
-          <a href="{{ url_for('students_page') }}"
-             class="dd-item {{ 'active' if request.endpoint in ['students_page','edit_student','student_report','student_finance'] }}">
-            <svg viewBox="0 0 24 24" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            Students
-          </a>
-          <a href="{{ url_for('teachers_page') }}"
-             class="dd-item {{ 'active' if request.endpoint in ['teachers_page','edit_teacher','view_teacher'] }}">
-            <svg viewBox="0 0 24 24" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Teachers
-          </a>
-          {% if session.get('role') == 'Admin' or not session.get('role') %}
-          <a href="{{ url_for('users_page') }}"
-             class="dd-item {{ 'active' if request.endpoint == 'users_page' }}">
-            <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>
-            Users
-          </a>
-          <a href="{{ url_for('student_portal_accounts') }}"
-             class="dd-item {{ 'active' if request.endpoint == 'student_portal_accounts' }}">
-            <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
-            Student Portal Accounts
-          </a>
-          {% endif %}
         </div>
       </li>
 
