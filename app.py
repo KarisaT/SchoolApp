@@ -364,11 +364,11 @@ def seed_db():
     random.seed(42)
 
     teachers_data = [
-        ("Alice Mwangi",   "Mathematics",  "alice@school.ac.ke",  "Active"),
-        ("Brian Otieno",   "English",      "brian@school.ac.ke",  "Active"),
-        ("Carol Njeri",    "Science",      "carol@school.ac.ke",  "Active"),
-        ("David Kimani",   "History",      "david@school.ac.ke",  "Active"),
-        ("Esther Wanjiku", "Computer Sc.", "esther@school.ac.ke", "Active"),
+        ("Alice Mwangi",   "Mathematics",  "alice@myapp.io",  "Active"),
+        ("Brian Otieno",   "English",      "brian@myapp.io",  "Active"),
+        ("Carol Njeri",    "Science",      "carol@myapp.io",  "Active"),
+        ("David Kimani",   "History",      "david@myapp.io",  "Active"),
+        ("Esther Wanjiku", "Computer Sc.", "esther@myapp.io", "Active"),
     ]
     teachers = []
     for name, subject, email, status in teachers_data:
