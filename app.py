@@ -5,9 +5,29 @@ import random
 import secrets
 import threading
 import requests as http_requests
+import threading
+import requests as http_requests
 
 from dotenv import load_dotenv
 load_dotenv()
+
+# ── SIEM Integration ──────────────────────────────────────────────────────────
+_SIEM_URL = os.environ.get('SIEM_INGEST_URL', 'https://siem-3bwu.onrender.com/api/ingest')
+
+def _send_to_siem(line: str):
+    """Fire-and-forget — never blocks or crashes the main app."""
+    try:
+        http_requests.post(_SIEM_URL, json={'line': line}, timeout=3)
+    except Exception:
+        pass
+
+def siem_log(line: str):
+    threading.Thread(target=_send_to_siem, args=(line,), daemon=True).start()
+
+def _ip():
+    return request.headers.get('X-Forwarded-For', request.remote_addr or '0.0.0.0').split(',')[0].strip()
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 # ── SIEM Integration ──────────────────────────
 SIEM_URL = os.environ.get('SIEM_INGEST_URL', 'https://siem-3bwu.onrender.com/api/ingest')
@@ -80,6 +100,7 @@ def csrf_protect(f):
             token      = session.get("_csrf_token")
             form_token = request.form.get("_csrf_token")
             if not token or not form_token or not secrets.compare_digest(token, form_token):
+                siem_log(f'{_ip()} - - {request.method} {request.path} 403 reason=csrf_violation')
                 abort(403)
         return f(*args, **kwargs)
     return decorated
@@ -101,6 +122,7 @@ def roles_required(*roles):
         def decorated(*args, **kwargs):
             role = session.get("role")
             if role != "Admin" and role not in roles:
+                siem_log(f'{_ip()} - - {request.method} {request.path} 403 reason=role_denied user={session.get("user","?")} role={role}')
                 abort(403)
             return f(*args, **kwargs)
         return decorated
@@ -111,6 +133,7 @@ def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if session.get("role") != "Admin":
+            siem_log(f'{_ip()} - - {request.method} {request.path} 403 reason=admin_only user={session.get("user","?")}')
             abort(403)
         return f(*args, **kwargs)
     return decorated
@@ -537,6 +560,7 @@ def login_page():
             session["role"]     = app_user.role
             session["user_id"]  = app_user.id
             session.pop("_csrf_token", None)
+            siem_log(f'{_ip()} - - POST /login 200 user={app_user.username} role={app_user.role}')
             return redirect(url_for("dashboard"))
 
         # Fallback: env-var admin
@@ -545,11 +569,13 @@ def login_page():
             session["user"] = username
             session["role"] = "Admin"
             session.pop("_csrf_token", None)
+            siem_log(f'{_ip()} - - POST /login 200 user={username} role=Admin')
             return redirect(url_for("dashboard"))
 
         # Report failed login to SIEM
         ip = request.headers.get('X-Forwarded-For', request.remote_addr or '0.0.0.0').split(',')[0].strip()
         siem_log(f'{ip} - - POST /login 401 user={username}')
+        siem_log(f'{_ip()} - - POST /login 401 user={username}')
         return render_template("login.html", error="Invalid credentials")
 
     return render_template("login.html")
@@ -750,6 +776,7 @@ def edit_student(id):
 @admin_required
 @csrf_protect
 def delete_student(id):
+    siem_log(f'{_ip()} - - POST /students/delete/{id} 200 user={session.get("user","?")} action=delete_student')
     db.session.delete(Student.query.get_or_404(id))
     db.session.commit()
     return redirect(url_for("students_page"))
@@ -848,6 +875,7 @@ def edit_teacher(id):
 @admin_required
 @csrf_protect
 def delete_teacher(id):
+    siem_log(f'{_ip()} - - POST /teachers/delete/{id} 200 user={session.get("user","?")} action=delete_teacher')
     db.session.delete(Teacher.query.get_or_404(id))
     db.session.commit()
     return redirect(url_for("teachers_page"))
@@ -912,6 +940,7 @@ def edit_course(id):
 @admin_required
 @csrf_protect
 def delete_course(id):
+    siem_log(f'{_ip()} - - POST /courses/delete/{id} 200 user={session.get("user","?")} action=delete_course')
     db.session.delete(Course.query.get_or_404(id))
     db.session.commit()
     return redirect(url_for("courses_page"))
@@ -1050,6 +1079,7 @@ def forbidden(e):
 
 @app.route("/logout")
 def logout():
+    siem_log(f'{_ip()} - - GET /logout 200 user={session.get("user", "unknown")}')
     session.clear()
     return redirect(url_for("login_page"))
 
@@ -1113,6 +1143,7 @@ def add_fee():
 @admin_required
 @csrf_protect
 def delete_fee(id):
+    siem_log(f'{_ip()} - - POST /finance/fee/delete/{id} 200 user={session.get("user","?")} action=delete_fee')
     db.session.delete(FeeStructure.query.get_or_404(id))
     db.session.commit()
     return redirect(url_for("finance_page"))
@@ -1145,6 +1176,7 @@ def add_payment():
 @admin_required
 @csrf_protect
 def delete_payment(id):
+    siem_log(f'{_ip()} - - POST /finance/payment/delete/{id} 200 user={session.get("user","?")} action=delete_payment')
     db.session.delete(Payment.query.get_or_404(id))
     db.session.commit()
     return redirect(url_for("finance_page"))
@@ -1186,6 +1218,7 @@ def add_exam():
 @admin_required
 @csrf_protect
 def delete_exam(id):
+    siem_log(f'{_ip()} - - POST /exams/delete/{id} 200 user={session.get("user","?")} action=delete_exam')
     db.session.delete(Exam.query.get_or_404(id))
     db.session.commit()
     return redirect(url_for("exams_page"))
@@ -1643,13 +1676,16 @@ def student_portal_login():
             session["student_user"] = pu.username
             pu.last_login = datetime.now()
             db.session.commit()
+            siem_log(f'{_ip()} - - POST /student-portal/login 200 user={pu.username}')
             return redirect(url_for("student_portal_home"))
+        siem_log(f'{_ip()} - - POST /student-portal/login 401 user={username}')
         error = "Invalid username or password."
     return render_template("student_portal_login.html", error=error)
 
 
 @app.route("/student-portal/logout")
 def student_portal_logout():
+    siem_log(f'{_ip()} - - GET /student-portal/logout 200 user={session.get("student_user","unknown")}')
     session.pop("student_id", None)
     session.pop("student_user", None)
     return redirect(url_for("student_portal_login"))
