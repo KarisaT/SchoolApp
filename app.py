@@ -3,9 +3,30 @@ from functools import wraps
 import os
 import random
 import secrets
+import threading
+import requests as http_requests
 
 from dotenv import load_dotenv
 load_dotenv()
+
+# ── SIEM Integration ──────────────────────────
+SIEM_URL = os.environ.get('SIEM_INGEST_URL', 'https://siem-3bwu.onrender.com/api/ingest')
+
+def _send_to_siem(log_line: str):
+    """Fire-and-forget POST to the SIEM. Runs in background thread so it
+    never blocks or breaks the main request if SIEM is down."""
+    try:
+        http_requests.post(
+            SIEM_URL,
+            json={'line': log_line},
+            timeout=3
+        )
+    except Exception:
+        pass  # SIEM being down must never break the school app
+
+def siem_log(log_line: str):
+    threading.Thread(target=_send_to_siem, args=(log_line,), daemon=True).start()
+
 
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 from flask_sqlalchemy import SQLAlchemy
@@ -526,6 +547,9 @@ def login_page():
             session.pop("_csrf_token", None)
             return redirect(url_for("dashboard"))
 
+        # Report failed login to SIEM
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr or '0.0.0.0').split(',')[0].strip()
+        siem_log(f'{ip} - - POST /login 401 user={username}')
         return render_template("login.html", error="Invalid credentials")
 
     return render_template("login.html")
