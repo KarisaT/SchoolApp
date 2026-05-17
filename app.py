@@ -384,6 +384,22 @@ class TeacherAttendance(db.Model):
     __table_args__ = (db.UniqueConstraint("teacher_id", "date", name="uq_teacher_date"),)
 
 
+# ── M-Pesa Pending Transactions ───────────────
+class MpesaTransaction(db.Model):
+    """Tracks in-flight STK Push requests so the status page can poll."""
+    __tablename__ = "mpesa_transaction"
+    id                  = db.Column(db.Integer, primary_key=True)
+    checkout_request_id = db.Column(db.String(100), unique=True, nullable=False)
+    merchant_request_id = db.Column(db.String(100), nullable=True)
+    student_id          = db.Column(db.Integer, db.ForeignKey("student.id", ondelete="CASCADE"), nullable=False)
+    fee_id              = db.Column(db.Integer, db.ForeignKey("fee_structure.id", ondelete="CASCADE"), nullable=False)
+    amount              = db.Column(db.Float, nullable=False)
+    phone               = db.Column(db.String(20), nullable=False)
+    status              = db.Column(db.String(20), default="pending")  # pending | completed | cancelled | error
+    created_at          = db.Column(db.DateTime, default=datetime.utcnow)
+    student             = db.relationship("Student")
+
+
 # ── Helpers ───────────────────────────────────
 def compute_grade(marks, total):
     pct = (marks / total) * 100 if total > 0 else 0
@@ -1403,51 +1419,139 @@ def mpesa_dashboard():
         total=sum(p.amount_paid for p in payments))
 
 
-@app.route("/mpesa/parent-portal")
-@login_required
+@app.route("/mpesa/parent-portal", methods=["GET"])
 def mpesa_parent_portal():
-    students   = Student.query.all()
+    """Public-facing parent payment portal. No staff login required."""
+    student_id_query = request.args.get("student_id", "").strip()
+    student  = None
+    paid     = 0
+    balance  = 0
+    fees     = []
     total_fees = sum(f.amount for f in FeeStructure.query.all())
-    student_data = []
-    for s in students:
-        paid = sum(p.amount_paid for p in s.payments)
-        student_data.append({"student": s, "paid": paid,
-            "balance": total_fees - paid, "total": total_fees})
+
+    if student_id_query:
+        student = Student.query.filter_by(id_number=student_id_query).first()
+        if student:
+            fees    = FeeStructure.query.order_by(FeeStructure.name).all()
+            paid    = sum(p.amount_paid for p in student.payments)
+            balance = total_fees - paid
+
     return render_template("mpesa_parent_portal.html",
-        student_data=student_data, total_fees=total_fees)
+        student=student,
+        student_id_query=student_id_query,
+        fees=fees,
+        paid=paid,
+        balance=balance,
+        total_fees=total_fees)
 
 
 @app.route("/mpesa/status")
-@login_required
 def mpesa_status():
+    checkout_id = request.args.get("checkout_id", "")
     return render_template("mpesa_status.html",
+        checkout_id=checkout_id,
         payments=Payment.query.order_by(Payment.payment_date.desc()).limit(50).all(),
         mpesa_payments=Payment.query.filter(Payment.method == "M-Pesa")
             .order_by(Payment.payment_date.desc()).limit(50).all())
 
 
 @app.route("/mpesa/initiate", methods=["POST"])
-@login_required
-@csrf_protect
 def mpesa_initiate():
+    """Initiate an STK Push and create a pending MpesaTransaction record."""
     phone      = request.form.get("phone", "").strip()
-    amount     = int(request.form.get("amount", 0))
-    student_id = int(request.form.get("student_id", 0))
-    if not phone or amount <= 0:
+    amount_str = request.form.get("amount", "0").strip()
+    student_id = request.form.get("student_id", "0").strip()
+    fee_id_str = request.form.get("fee_id", "").strip()
+
+    # Prepend 254 if phone was entered without country code (9 digits starting with 7/1)
+    if len(phone) == 9 and phone[0] in ("7", "1"):
+        phone = "254" + phone
+
+    try:
+        amount     = int(float(amount_str))
+        student_id = int(student_id)
+        fee_id     = int(fee_id_str) if fee_id_str else None
+    except (ValueError, TypeError):
         return redirect(url_for("mpesa_parent_portal"))
+
+    if not phone or amount <= 0 or not student_id:
+        return redirect(url_for("mpesa_parent_portal"))
+
+    # Fall back to first fee if none selected
+    if not fee_id:
+        first_fee = FeeStructure.query.first()
+        fee_id = first_fee.id if first_fee else 1
+
+    checkout_id = ""
     try:
         from mpesa import stk_push
-        result = stk_push(phone=phone, amount=amount,
-            account_ref=f"STU{student_id:04d}", description="School Fee Payment")
-        db.session.add(Payment(
-            student_id=student_id, amount_paid=amount, fee_id=1,
-            payment_date=date.today(),
-            reference=result.get("CheckoutRequestID"), method="M-Pesa",
-        ))
-        db.session.commit()
+        result = stk_push(
+            phone=phone,
+            amount=amount,
+            account_ref=f"STU{student_id:04d}",
+            description="School Fee",
+        )
+        if result.get("success"):
+            checkout_id = result["checkout_request_id"]
+            # Record pending transaction so we can poll it
+            txn = MpesaTransaction(
+                checkout_request_id=checkout_id,
+                merchant_request_id=result.get("merchant_request_id", ""),
+                student_id=student_id,
+                fee_id=fee_id,
+                amount=amount,
+                phone=phone,
+                status="pending",
+            )
+            db.session.add(txn)
+            db.session.commit()
+        else:
+            print(f"STK Push failed: {result.get('error')}")
     except Exception as e:
         print(f"M-Pesa initiation error: {e}")
-    return redirect(url_for("mpesa_status"))
+
+    return redirect(url_for("mpesa_status", checkout_id=checkout_id))
+
+
+@app.route("/mpesa/query/<checkout_id>")
+def mpesa_query(checkout_id):
+    """JSON endpoint polled by the status page to check STK Push result."""
+    txn = MpesaTransaction.query.filter_by(checkout_request_id=checkout_id).first()
+    if not txn:
+        return {"status": "error", "message": "Transaction not found"}, 404
+
+    # Already resolved — return cached status
+    if txn.status in ("completed", "cancelled", "error"):
+        return {"status": txn.status}
+
+    # Query Safaricom
+    try:
+        from mpesa import query_stk_status
+        result = query_stk_status(checkout_id)
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+    new_status = result.get("status", "pending")
+
+    if new_status == "completed":
+        # Finalise: update transaction and create Payment record
+        txn.status = "completed"
+        existing = Payment.query.filter_by(reference=checkout_id).first()
+        if not existing:
+            db.session.add(Payment(
+                student_id=txn.student_id,
+                fee_id=txn.fee_id,
+                amount_paid=txn.amount,
+                payment_date=date.today(),
+                method="M-Pesa",
+                reference=checkout_id,
+            ))
+        db.session.commit()
+    elif new_status in ("cancelled", "error"):
+        txn.status = new_status
+        db.session.commit()
+
+    return {"status": new_status, "message": result.get("result_desc", "")}
 
 
 @app.route("/mpesa/callback", methods=["POST"])
@@ -1466,18 +1570,42 @@ def mpesa_callback():
 
     data = request.get_json(silent=True) or {}
     try:
-        body   = data["Body"]["stkCallback"]
-        code   = body["ResultCode"]
-        req_id = body["CheckoutRequestID"]
-        if code == 0:
-            items   = {i["Name"]: i["Value"] for i in body["CallbackMetadata"]["Item"]}
-            receipt = items.get("MpesaReceiptNumber")
-            payment = Payment.query.filter_by(reference=req_id).first()
-            if payment and receipt:
+        from mpesa import parse_callback
+        parsed = parse_callback(data)
+        checkout_id = parsed["checkout_request_id"]
+
+        # Update MpesaTransaction record
+        txn = MpesaTransaction.query.filter_by(checkout_request_id=checkout_id).first()
+
+        if parsed["success"]:
+            receipt = parsed.get("mpesa_receipt") or checkout_id
+            if txn:
+                txn.status = "completed"
+            # Upsert Payment (callback may arrive before or after query)
+            payment = Payment.query.filter_by(reference=checkout_id).first()
+            if payment:
                 payment.reference = receipt
+            else:
+                fee_id = txn.fee_id if txn else 1
+                student_id = txn.student_id if txn else None
+                if student_id:
+                    db.session.add(Payment(
+                        student_id=student_id,
+                        fee_id=fee_id,
+                        amount_paid=parsed.get("amount") or (txn.amount if txn else 0),
+                        payment_date=date.today(),
+                        method="M-Pesa",
+                        reference=receipt,
+                    ))
+            db.session.commit()
+        else:
+            if txn:
+                result_code = parsed.get("result_code", "")
+                txn.status = "cancelled" if result_code in ("1032", "1") else "error"
                 db.session.commit()
     except Exception as e:
         print(f"Callback error: {e}")
+
     return {"ResultCode": 0, "ResultDesc": "Accepted"}
 
 

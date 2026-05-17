@@ -189,7 +189,7 @@
   {% if balance > 0 %}
   <div class="pay-card">
     <h3 class="section-title">Pay via M-Pesa</h3>
-    <form method="POST" action="{{ url_for('mpesa_parent_portal') }}">
+    <form method="POST" action="{{ url_for('mpesa_initiate') }}">
         <input type="hidden" name="student_id" value="{{ student.id }}">
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
